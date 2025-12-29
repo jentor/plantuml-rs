@@ -1,0 +1,12 @@
+[package]
+name = "plantuml-model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Типизированные модели для layout и рендеринга"
+keywords = ["plantuml", "model"]
+
+[dependencies]
+plantuml-ast = { workspace = true }

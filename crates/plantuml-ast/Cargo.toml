@@ -1,0 +1,17 @@
+[package]
+name = "plantuml-ast"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "AST типы для PlantUML диаграмм"
+keywords = ["plantuml", "ast", "uml"]
+categories = ["data-structures"]
+
+[dependencies]
+serde = { workspace = true }
+smallvec = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -1,0 +1,28 @@
+@startuml
+' Базовый тест class diagram
+class User {
+    - id: Long
+    - name: String
+    - email: String
+    + getId(): Long
+    + getName(): String
+    + setName(name: String): void
+}
+
+class Order {
+    - id: Long
+    - items: List<OrderItem>
+    - total: BigDecimal
+    + addItem(item: OrderItem): void
+    + calculateTotal(): BigDecimal
+}
+
+class OrderItem {
+    - product: Product
+    - quantity: int
+    - price: BigDecimal
+}
+
+User "1" -- "0..*" Order : places >
+Order "1" *-- "1..*" OrderItem : contains
+@enduml

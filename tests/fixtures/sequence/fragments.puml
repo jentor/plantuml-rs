@@ -1,0 +1,30 @@
+@startuml
+' Тест фрагментов (alt, opt, loop, etc.)
+Alice -> Bob: Запрос авторизации
+
+alt Успешная авторизация
+    Bob --> Alice: Токен
+    Alice -> Server: Запрос с токеном
+    Server --> Alice: Данные
+else Неудачная авторизация
+    Bob --> Alice: Ошибка
+end
+
+opt Дополнительная проверка
+    Alice -> Bob: Проверить права
+    Bob --> Alice: OK
+end
+
+loop Каждые 5 минут
+    Alice -> Server: Ping
+    Server --> Alice: Pong
+end
+
+par Параллельные запросы
+    Alice -> Service1: Запрос 1
+else
+    Alice -> Service2: Запрос 2
+else
+    Alice -> Service3: Запрос 3
+end
+@enduml

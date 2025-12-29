@@ -1,0 +1,18 @@
+@startuml
+' Базовый тест state diagram
+[*] --> Idle
+
+Idle --> Processing : Получен запрос
+Processing --> Completed : Успех
+Processing --> Failed : Ошибка
+
+Completed --> [*]
+Failed --> Idle : Повторить
+
+state Processing {
+    [*] --> Validating
+    Validating --> Executing : Валидация пройдена
+    Validating --> [*] : Ошибка валидации
+    Executing --> [*]
+}
+@enduml

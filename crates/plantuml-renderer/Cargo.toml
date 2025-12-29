@@ -1,0 +1,31 @@
+[package]
+name = "plantuml-renderer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SVG/PNG рендеринг диаграмм"
+keywords = ["plantuml", "svg", "render"]
+
+[dependencies]
+plantuml-layout = { workspace = true }
+plantuml-themes = { workspace = true }
+svg = { workspace = true }
+thiserror = { workspace = true }
+
+[features]
+default = []
+png = ["dep:resvg", "dep:tiny-skia", "dep:fontdb"]
+
+[dependencies.resvg]
+workspace = true
+optional = true
+
+[dependencies.tiny-skia]
+workspace = true
+optional = true
+
+[dependencies.fontdb]
+workspace = true
+optional = true

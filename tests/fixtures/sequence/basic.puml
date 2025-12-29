@@ -1,0 +1,5 @@
+@startuml
+' Базовый тест sequence diagram
+Alice -> Bob: Привет
+Bob --> Alice: Привет!
+@enduml

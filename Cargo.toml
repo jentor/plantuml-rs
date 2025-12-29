@@ -1,0 +1,76 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/plantuml-core",
+    "crates/plantuml-ast",
+    "crates/plantuml-parser",
+    "crates/plantuml-preprocessor",
+    "crates/plantuml-model",
+    "crates/plantuml-layout",
+    "crates/plantuml-renderer",
+    "crates/plantuml-themes",
+    "crates/plantuml-stdlib",
+    "crates/plantuml-wasm",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/user/plantuml-rs"
+keywords = ["plantuml", "uml", "diagram", "svg", "wasm"]
+categories = ["graphics", "visualization", "wasm"]
+
+[workspace.dependencies]
+# Внутренние зависимости
+plantuml-core = { path = "crates/plantuml-core" }
+plantuml-ast = { path = "crates/plantuml-ast" }
+plantuml-parser = { path = "crates/plantuml-parser" }
+plantuml-preprocessor = { path = "crates/plantuml-preprocessor" }
+plantuml-model = { path = "crates/plantuml-model" }
+plantuml-layout = { path = "crates/plantuml-layout" }
+plantuml-renderer = { path = "crates/plantuml-renderer" }
+plantuml-themes = { path = "crates/plantuml-themes" }
+plantuml-stdlib = { path = "crates/plantuml-stdlib" }
+plantuml-wasm = { path = "crates/plantuml-wasm" }
+
+# Парсинг
+logos = "0.14"
+pest = "2.7"
+pest_derive = "2.7"
+
+# Структуры данных
+petgraph = { version = "0.6", default-features = false, features = ["stable_graph"] }
+indexmap = "2.0"
+smallvec = "1.13"
+
+# Рендеринг
+svg = "0.17"
+resvg = { version = "0.42", default-features = false }
+tiny-skia = "0.11"
+fontdb = { version = "0.21", default-features = false }
+ab_glyph = "0.2"
+
+# Утилиты
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# WASM
+wasm-bindgen = "0.2"
+
+# Тестирование
+insta = { version = "1.40", features = ["yaml"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.test]
+opt-level = 1

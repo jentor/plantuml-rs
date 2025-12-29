@@ -1,0 +1,32 @@
+@startuml
+' Базовый тест component diagram
+package "Frontend" {
+    [Web Application]
+    [Mobile App]
+}
+
+package "Backend" {
+    [API Gateway]
+    [Auth Service]
+    [User Service]
+    [Order Service]
+}
+
+package "Data Layer" {
+    database "PostgreSQL" as db
+    database "Redis" as cache
+}
+
+[Web Application] --> [API Gateway]
+[Mobile App] --> [API Gateway]
+
+[API Gateway] --> [Auth Service]
+[API Gateway] --> [User Service]
+[API Gateway] --> [Order Service]
+
+[Auth Service] --> db
+[User Service] --> db
+[Order Service] --> db
+
+[Auth Service] --> cache
+@enduml

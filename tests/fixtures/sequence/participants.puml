@@ -1,0 +1,19 @@
+@startuml
+' Тест различных типов участников
+participant Participant
+actor Actor
+boundary Boundary
+control Control
+entity Entity
+database Database
+collections Collections
+queue Queue
+
+Participant -> Actor: сообщение
+Actor -> Boundary: сообщение
+Boundary -> Control: сообщение
+Control -> Entity: сообщение
+Entity -> Database: сообщение
+Database -> Collections: сообщение
+Collections -> Queue: сообщение
+@enduml

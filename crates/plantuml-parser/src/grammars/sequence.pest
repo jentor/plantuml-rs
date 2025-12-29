@@ -1,0 +1,305 @@
+// Грамматика PlantUML Sequence Diagrams
+// https://plantuml.com/sequence-diagram
+
+// === Основные правила ===
+
+// ws* в начале строки позволяет отступы (важно для фрагментов)
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ (ws* ~ statement ~ NEWLINE*)* ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+// ВАЖНО: Порядок правил критичен!
+// Сначала идут ключевые слова, затем message (который ловит всё остальное)
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | autonumber
+    | participant_decl   // Объявления участников - раньше message
+    | create_stmt
+    | destroy_stmt
+    | activate_stmt
+    | deactivate_stmt
+    | return_stmt
+    | note_stmt
+    | divider
+    | delay
+    | space
+    | ref_stmt
+    | box_stmt
+    | group_stmt
+    | fragment_start     // Фрагменты - раньше message
+    | fragment_else
+    | fragment_end
+    | message            // Message - последним, так как ловит identifier -> arrow -> identifier
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+
+// === Autonumber ===
+
+autonumber = { "autonumber" ~ (ws+ ~ number ~ (ws+ ~ number)? ~ (ws+ ~ quoted_string)?)? }
+
+// === Участники ===
+// ВАЖНО: Используем конкретные ключевые слова, а не identifier
+
+participant_decl = {
+    participant_type ~ ws+ ~ participant_name ~ 
+    (ws+ ~ "as" ~ ws+ ~ simple_identifier)? ~
+    (ws+ ~ stereotype)? ~
+    (ws+ ~ color)?
+    ~ (ws+ ~ "order" ~ ws+ ~ number)?
+}
+
+participant_type = {
+    "participant"
+    | "actor"
+    | "boundary"
+    | "control"
+    | "entity"
+    | "database"
+    | "collections"
+    | "queue"
+}
+
+participant_name = { quoted_string | simple_identifier }
+
+// === Create / Destroy ===
+
+create_stmt = { "create" ~ ws+ ~ participant_name }
+destroy_stmt = { "destroy" ~ ws+ ~ participant_name }
+
+// === Activate / Deactivate ===
+
+activate_stmt = { "activate" ~ ws+ ~ simple_identifier ~ (ws+ ~ color)? }
+deactivate_stmt = { "deactivate" ~ ws+ ~ simple_identifier }
+return_stmt = { "return" ~ (ws+ ~ message_text)? }
+
+// === Сообщения ===
+// ВАЖНО: Сообщение должно содержать стрелку обязательно
+
+message = {
+    participant_ref ~ ws* ~ arrow ~ ws* ~ participant_ref ~ 
+    (ws* ~ ":" ~ ws* ~ message_text)?
+}
+
+// participant_ref не должен совпадать с ключевыми словами
+participant_ref = @{ 
+    !reserved_word ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* 
+}
+
+// Зарезервированные слова, которые НЕ могут быть именами участников в message
+reserved_word = {
+    ( "participant" | "actor" | "boundary" | "control" | "entity" 
+    | "database" | "collections" | "queue" | "create" | "destroy"
+    | "activate" | "deactivate" | "return" | "note" | "hnote" | "rnote"
+    | "title" | "autonumber" | "skinparam" | "ref" | "box" | "group"
+    | "alt" | "else" | "opt" | "loop" | "par" | "break" | "critical" | "end"
+    | "@startuml" | "@enduml" ) ~ !(ASCII_ALPHANUMERIC | "_")
+}
+
+// === Стрелки ===
+
+arrow = {
+    arrow_right | arrow_left
+}
+
+// Стрелки направо: ->, -->, ->>, .>, ..>, etc.
+arrow_right = {
+    line_style_left? ~ 
+    arrow_line_right ~
+    activation_mark?
+}
+
+// Стрелки налево: <-, <--, <<-, <., <.., etc.
+arrow_left = {
+    activation_mark? ~
+    arrow_line_left ~
+    line_style_right?
+}
+
+// Линия стрелки направо - порядок важен: длинные варианты первыми
+arrow_line_right = @{
+    // Двойная сплошная с двойной головкой
+    "--" ~ ">>"
+    // Двойная пунктирная с двойной головкой
+    | ".." ~ ">>"
+    // Двойная сплошная с одинарной головкой
+    | "--" ~ ">"
+    // Двойная пунктирная с одинарной головкой
+    | ".." ~ ">"
+    // Одинарная сплошная с двойной головкой
+    | "-" ~ ">>"
+    // Одинарная пунктирная с двойной головкой
+    | "." ~ ">>"
+    // Одинарная сплошная с одинарной головкой
+    | "-" ~ ">"
+    // Одинарная пунктирная с одинарной головкой
+    | "." ~ ">"
+    // Специальные стрелки
+    | "-" ~ "-"* ~ ("\\\\" | "\\" | "//" | "/" | "o" | "x")
+    | "." ~ "."* ~ ("\\\\" | "\\" | "//" | "/" | "o" | "x")
+}
+
+// Линия стрелки налево
+arrow_line_left = @{
+    // Двойная головка с двойной сплошной
+    "<<" ~ "--"
+    // Двойная головка с двойной пунктирной
+    | "<<" ~ ".."
+    // Двойная головка с одинарной сплошной
+    | "<<" ~ "-"
+    // Двойная головка с одинарной пунктирной
+    | "<<" ~ "."
+    // Одинарная головка с двойной сплошной
+    | "<" ~ "--"
+    // Одинарная головка с двойной пунктирной
+    | "<" ~ ".."
+    // Одинарная головка с одинарной сплошной
+    | "<" ~ "-"
+    // Одинарная головка с одинарной пунктирной
+    | "<" ~ "."
+    // Специальные стрелки
+    | ("\\\\" | "\\" | "//" | "/" | "o" | "x") ~ "-" ~ "-"*
+    | ("\\\\" | "\\" | "//" | "/" | "o" | "x") ~ "." ~ "."*
+}
+
+line_style_left = { "[" ~ line_color? ~ "]" }
+line_style_right = { "[" ~ line_color? ~ "]" }
+
+activation_mark = { "++" | "--" | "**" | "!!" }
+
+line_color = { "#" ~ hex_color }
+
+message_text = { (!NEWLINE ~ ANY)+ }
+
+// === Заметки ===
+
+note_stmt = {
+    note_single
+    | note_multi
+    | hnote
+    | rnote
+}
+
+note_single = {
+    "note" ~ ws+ ~ note_position ~ ws* ~
+    (("of" | "over") ~ ws+ ~ identifier_list)? ~
+    (ws* ~ ":" ~ ws* ~ note_text)?
+}
+
+note_multi = {
+    "note" ~ ws+ ~ note_position ~ ws* ~
+    (("of" | "over") ~ ws+ ~ identifier_list)? ~
+    NEWLINE ~ note_body ~ "end" ~ ws* ~ "note"
+}
+
+hnote = { "hnote" ~ ws+ ~ note_position ~ ws* ~ ("of" | "over")? ~ ws* ~ identifier_list? ~ ws* ~ ":" ~ ws* ~ note_text }
+rnote = { "rnote" ~ ws+ ~ note_position ~ ws* ~ ("of" | "over")? ~ ws* ~ identifier_list? ~ ws* ~ ":" ~ ws* ~ note_text }
+
+note_position = { "left" | "right" | "over" | "across" }
+
+identifier_list = { simple_identifier ~ (ws* ~ "," ~ ws* ~ simple_identifier)* }
+
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws* ~ "note") ~ ANY)* }
+
+// === Разделители и задержки ===
+
+divider = { "==" ~ ws* ~ divider_text? ~ ws* ~ "==" }
+divider_text = { (!("==" | NEWLINE) ~ ANY)* }
+
+delay = { "..." ~ ws* ~ delay_text? ~ ws* ~ "..."? }
+delay_text = { (!("..." | NEWLINE) ~ ANY)* }
+
+space = { "|||" | "||" ~ number ~ "||" }
+
+// === Ref ===
+
+ref_stmt = { "ref" ~ ws+ ~ "over" ~ ws+ ~ identifier_list ~ ws* ~ (":" ~ ws* ~ ref_text | NEWLINE ~ ref_body ~ "end" ~ ws* ~ "ref") }
+ref_text = { (!NEWLINE ~ ANY)* }
+ref_body = { (!("end" ~ ws* ~ "ref") ~ ANY)* }
+
+// === Box ===
+
+box_stmt = { 
+    "box" ~ (ws+ ~ quoted_string)? ~ (ws+ ~ color)? ~ NEWLINE ~ 
+    (statement ~ NEWLINE*)* ~ 
+    "end" ~ ws* ~ "box"
+}
+
+// === Group (simple) ===
+
+group_stmt = {
+    "group" ~ ws+ ~ group_label ~ NEWLINE ~
+    (statement ~ NEWLINE*)* ~
+    "end"
+}
+
+group_label = { (!NEWLINE ~ ANY)+ }
+
+// === Фрагменты (alt, opt, loop, etc.) ===
+
+fragment_start = {
+    fragment_type ~ (ws+ ~ fragment_condition)?
+}
+
+fragment_type = @{
+    "alt"
+    | "opt"
+    | "loop"
+    | "par"
+    | "break"
+    | "critical"
+}
+
+fragment_condition = { (!NEWLINE ~ ANY)+ }
+
+fragment_else = { "else" ~ (ws+ ~ fragment_condition)? }
+
+fragment_end = { "end" ~ !(ws* ~ ("note" | "ref" | "box")) }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+    | "skinparam" ~ ws+ ~ skinparam_name ~ ws* ~ "{" ~ ws* ~ NEWLINE ~ (skinparam_line ~ NEWLINE)* ~ "}"
+}
+
+skinparam_name = { (ASCII_ALPHA | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+skinparam_line = { ws* ~ skinparam_name ~ ws+ ~ skinparam_value }
+
+// === Базовые токены ===
+
+// Обычный идентификатор
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// Для обратной совместимости
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+stereotype = { "<<" ~ (!(">>") ~ ANY)* ~ ">>" }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+number = @{ ASCII_DIGIT+ }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+// ВАЖНО: Не используем WHITESPACE для implicit whitespace handling,
+// чтобы иметь полный контроль над парсингом
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

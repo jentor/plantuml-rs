@@ -1,0 +1,15 @@
+[package]
+name = "plantuml-layout"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Layout engines для размещения элементов диаграмм"
+keywords = ["plantuml", "layout", "graph"]
+
+[dependencies]
+plantuml-ast = { workspace = true }
+plantuml-model = { workspace = true }
+petgraph = { workspace = true }
+thiserror = { workspace = true }

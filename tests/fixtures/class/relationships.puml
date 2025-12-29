@@ -1,0 +1,42 @@
+@startuml
+' Тест различных типов отношений
+
+' Наследование
+class Animal
+class Dog
+class Cat
+Animal <|-- Dog
+Animal <|-- Cat
+
+' Реализация интерфейса
+interface Runnable {
+    + run(): void
+}
+class Thread
+Runnable <|.. Thread
+
+' Композиция
+class Car
+class Engine
+Car *-- Engine
+
+' Агрегация
+class Department
+class Employee
+Department o-- Employee
+
+' Ассоциация
+class Student
+class Course
+Student -- Course
+
+' Зависимость
+class Client
+class Server
+Client ..> Server
+
+' Множественность
+class Company
+class Person
+Company "1" -- "many" Person : employs
+@enduml

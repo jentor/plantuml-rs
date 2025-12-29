@@ -1,0 +1,29 @@
+[package]
+name = "plantuml-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+description = "Pure Rust библиотека для рендеринга PlantUML диаграмм — главный фасад"
+
+[dependencies]
+plantuml-ast.workspace = true
+plantuml-parser.workspace = true
+plantuml-preprocessor.workspace = true
+plantuml-layout.workspace = true
+plantuml-renderer.workspace = true
+plantuml-themes.workspace = true
+
+thiserror.workspace = true
+serde = { workspace = true, optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dev-dependencies]
+insta.workspace = true
