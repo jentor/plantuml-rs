@@ -1,0 +1,114 @@
+// PlantUML ER (Entity-Relationship) диаграмма
+// Синтаксис:
+// @startuml
+// entity User {
+//   * id : int <<PK>>
+//   --
+//   name : varchar
+// }
+// User ||--o{ Order : places
+// @enduml
+
+er_diagram = {
+    SOI ~
+    ws ~
+    diagram_start ~
+    ws ~
+    (er_element | NEWLINE)* ~
+    ws ~
+    diagram_end ~
+    ws ~
+    EOI
+}
+
+diagram_start = _{ "@startuml" }
+diagram_end = _{ "@enduml" }
+
+er_element = _{
+    title_directive |
+    hide_directive |
+    skinparam |
+    entity_definition |
+    er_relationship |
+    comment_line
+}
+
+// Директивы
+title_directive = { "title" ~ ws_inline+ ~ title_text ~ NEWLINE }
+title_text = { (!NEWLINE ~ ANY)+ }
+
+hide_directive = { "hide" ~ ws_inline+ ~ (!NEWLINE ~ ANY)+ ~ NEWLINE }
+
+skinparam = { "skinparam" ~ ws_inline+ ~ (!NEWLINE ~ ANY)+ ~ NEWLINE }
+
+comment_line = { "'" ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+
+// Entity definition
+entity_definition = {
+    "entity" ~ ws_inline+ ~ entity_name ~ 
+    (ws_inline+ ~ "as" ~ ws_inline+ ~ entity_alias)? ~
+    (ws_inline* ~ stereotype)? ~
+    (ws_inline* ~ color_spec)? ~
+    ws ~ "{" ~ ws ~
+    (separator | entity_member | NEWLINE)* ~
+    ws ~ "}"
+}
+
+entity_name = @{ identifier }
+entity_alias = @{ identifier }
+
+entity_member = {
+    !("--" | "}") ~
+    ws_inline* ~
+    required_marker? ~ ws_inline* ~ 
+    attribute_name ~ 
+    (ws_inline* ~ ":" ~ ws_inline* ~ attribute_type)? ~
+    (ws_inline* ~ stereotype)? ~
+    NEWLINE
+}
+
+required_marker = { "*" ~ ws_inline* }
+attribute_name = @{ (ASCII_ALPHANUMERIC | "_")+ }
+attribute_type = @{ (ASCII_ALPHANUMERIC | "_" | "(" | ")" | "," | " ")+ }
+
+separator = { ws_inline* ~ "--" ~ separator_text? ~ NEWLINE }
+separator_text = { (!NEWLINE ~ ANY)* }
+
+stereotype = { "<<" ~ stereotype_content ~ ">>" }
+stereotype_content = @{ (!">" ~ ANY)+ }
+
+color_spec = { "#" ~ color_value }
+color_value = @{ (ASCII_ALPHANUMERIC)+ }
+
+// ER Relationship (IE notation)
+// User ||--o{ Order : places
+er_relationship = {
+    entity_ref ~ 
+    ws_inline* ~ left_cardinality ~ 
+    relation_line ~ 
+    right_cardinality ~ ws_inline* ~
+    entity_ref ~
+    (ws_inline* ~ ":" ~ ws_inline* ~ relation_label)? ~
+    NEWLINE
+}
+
+entity_ref = @{ identifier }
+
+// Cardinality symbols (IE notation)
+left_cardinality = @{
+    "||" | "|o" | "o|" | "}|" | "|{" | "}o" | "o{" | "|" | "}" | "{"
+}
+
+right_cardinality = @{
+    "||" | "|o" | "o|" | "}|" | "|{" | "}o" | "o{" | "|" | "}" | "{"
+}
+
+relation_line = @{ "--" | ".." }
+
+relation_label = @{ (ASCII_ALPHANUMERIC | "_" | " ")+ }
+
+// Common
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+ws = _{ (" " | "\t" | NEWLINE)* }
+ws_inline = _{ " " | "\t" }

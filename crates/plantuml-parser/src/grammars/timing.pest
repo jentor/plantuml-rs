@@ -1,0 +1,185 @@
+// Грамматика PlantUML Timing Diagrams
+// https://plantuml.com/timing-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (body_line)* }
+
+body_line = _{
+    ws* ~ !end_tag ~ statement ~ NEWLINE*
+    | ws* ~ NEWLINE
+}
+
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | scale_stmt
+    | participant_decl    // robust/concise/clock/binary
+    | time_marker         // @0, @100, @+50
+    | state_change        // Entity is State
+    | state_transition    // Entity: State -> State
+    | constraint_stmt     // {duration}
+    | highlight_stmt      // highlight
+    | note_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и масштаб ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+scale_stmt = { "scale" ~ ws+ ~ number ~ ws* ~ "as" ~ ws* ~ number ~ ws* ~ pixel_unit? }
+pixel_unit = { "pixels" | "pixel" }
+
+// === Участники ===
+
+participant_decl = {
+    participant_type ~ ws+ ~ participant_name ~
+    (ws+ ~ "as" ~ ws+ ~ simple_identifier)? ~
+    (ws+ ~ "with" ~ ws+ ~ number ~ ws+ ~ "states")? ~
+    (ws+ ~ color)?
+}
+
+participant_type = {
+    "robust"
+    | "concise"
+    | "clock"
+    | "binary"
+}
+
+participant_name = { quoted_string | simple_identifier }
+
+// === Маркеры времени ===
+
+// @0, @100, @+50, @start_time
+time_marker = {
+    "@" ~ time_value
+}
+
+time_value = {
+    relative_time
+    | absolute_time
+    | named_time
+}
+
+absolute_time = { number }
+relative_time = { "+" ~ number }
+named_time = { simple_identifier }
+
+// === Изменение состояния ===
+
+// Entity is State
+// Entity is State: label
+state_change = {
+    entity_ref ~ ws+ ~ "is" ~ ws+ ~ state_value ~ (ws* ~ ":" ~ ws* ~ label_text)?
+}
+
+// Entity: Old -> New
+state_transition = {
+    entity_ref ~ ws* ~ ":" ~ ws* ~ state_value ~ ws* ~ transition_arrow ~ ws* ~ state_value
+}
+
+transition_arrow = { "->" | "-->" }
+
+entity_ref = @{ !reserved_word ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+state_value = { 
+    quoted_string 
+    | "{" ~ (!("}" | NEWLINE) ~ ANY)* ~ "}"  // {hidden}, {-}
+    | simple_state
+}
+
+simple_state = @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+label_text = { (!NEWLINE ~ ANY)* }
+
+// === Ограничения времени ===
+
+// {<duration>} или {5 ms}
+constraint_stmt = {
+    entity_ref? ~ ws* ~ "{" ~ constraint_content ~ "}"
+}
+
+constraint_content = { (!("}" | NEWLINE) ~ ANY)+ }
+
+// === Highlight ===
+
+highlight_stmt = {
+    "highlight" ~ ws+ ~ time_range ~ (ws+ ~ color)?
+}
+
+time_range = {
+    time_value ~ ws+ ~ "to" ~ ws+ ~ time_value
+}
+
+// === Заметки ===
+
+note_stmt = {
+    note_single
+    | note_multi
+}
+
+note_single = {
+    "note" ~ ws+ ~ note_position ~ ws* ~
+    ("of" ~ ws+ ~ entity_ref ~ ws*)? ~
+    ":" ~ ws* ~ note_text
+}
+
+note_multi = {
+    "note" ~ ws+ ~ note_position ~ ws* ~
+    ("of" ~ ws+ ~ entity_ref)? ~ ws* ~
+    NEWLINE ~ note_body ~ "end" ~ ws* ~ "note"
+}
+
+note_position = { "top" | "bottom" | "left" | "right" }
+
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws* ~ "note") ~ ANY)* }
+
+// === Зарезервированные слова ===
+
+reserved_word = {
+    ( "robust" | "concise" | "clock" | "binary"
+    | "is" | "highlight" | "note" | "title" | "scale"
+    | "skinparam" | "end"
+    | "@startuml" | "@enduml" ) ~ !(ASCII_ALPHANUMERIC | "_")
+}
+
+// === Skinparam ===
+
+skinparam = {
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+    | "skinparam" ~ ws+ ~ skinparam_name ~ ws* ~ "{" ~ ws* ~ NEWLINE ~ (skinparam_line ~ NEWLINE)* ~ "}"
+}
+
+skinparam_name = { (ASCII_ALPHA | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+skinparam_line = { ws* ~ skinparam_name ~ ws+ ~ skinparam_value }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+number = @{ ASCII_DIGIT+ }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

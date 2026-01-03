@@ -1,0 +1,90 @@
+// PlantUML JSON диаграмма
+// Синтаксис:
+// @startjson
+// {
+//   "key": "value",
+//   "number": 123,
+//   "array": [1, 2, 3]
+// }
+// @endjson
+
+json_diagram = {
+    SOI ~
+    ws ~
+    diagram_start ~
+    ws ~
+    (directive)* ~
+    json_content? ~
+    ws ~
+    diagram_end ~
+    ws ~
+    EOI
+}
+
+diagram_start = _{ "@startjson" }
+diagram_end = _{ "@endjson" }
+
+// Директивы PlantUML
+directive = _{ title_directive | highlight_directive }
+
+title_directive = { "title" ~ ws_inline+ ~ title_text ~ NEWLINE ~ ws }
+title_text = { (!NEWLINE ~ ANY)+ }
+
+highlight_directive = { "#highlight" ~ ws_inline+ ~ json_path ~ NEWLINE ~ ws }
+json_path = { (!NEWLINE ~ ANY)+ }
+
+// JSON контент
+json_content = { json_value }
+
+json_value = {
+    json_object |
+    json_array |
+    json_string |
+    json_number |
+    json_boolean |
+    json_null
+}
+
+json_object = {
+    "{" ~ ws ~
+    (json_member ~ (ws ~ "," ~ ws ~ json_member)*)? ~
+    ws ~ "}"
+}
+
+json_member = {
+    json_string ~ ws ~ ":" ~ ws ~ json_value
+}
+
+json_array = {
+    "[" ~ ws ~
+    (json_value ~ (ws ~ "," ~ ws ~ json_value)*)? ~
+    ws ~ "]"
+}
+
+json_string = @{
+    "\"" ~ json_string_content ~ "\""
+}
+
+json_string_content = @{
+    json_char*
+}
+
+json_char = {
+    !("\"" | "\\") ~ ANY |
+    "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t") |
+    "\\" ~ "u" ~ ASCII_HEX_DIGIT{4}
+}
+
+json_number = @{
+    "-"? ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*) ~
+    ("." ~ ASCII_DIGIT+)? ~
+    (("e" | "E") ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
+
+json_boolean = { "true" | "false" }
+
+json_null = { "null" }
+
+// Вспомогательные правила - whitespace включает newlines
+ws = _{ (" " | "\t" | NEWLINE)* }
+ws_inline = _{ " " | "\t" }

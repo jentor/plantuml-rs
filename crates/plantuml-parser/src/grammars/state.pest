@@ -1,0 +1,229 @@
+// Грамматика PlantUML State Diagrams
+// https://plantuml.com/state-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (ws* ~ statement ~ NEWLINE*)* }
+
+// ВАЖНО: Порядок правил критичен!
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | hide_stmt
+    | scale_stmt
+    | state_def
+    | transition
+    | note_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и настройки ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+hide_stmt = { "hide" ~ ws+ ~ rest_of_line }
+scale_stmt = { "scale" ~ ws+ ~ rest_of_line }
+
+// === Определение состояния ===
+// ВАЖНО: Порядок критичен! Более специфичные правила ДОЛЖНЫ идти первыми!
+
+state_def = {
+    state_composite
+    | state_choice
+    | state_fork_join
+    | state_entry_exit
+    | state_stereotype
+    | state_simple
+    | state_alias
+}
+
+// Составное состояние с вложенными
+// state "Name" as alias { ... }
+// state Name { ... }
+state_composite = {
+    "state" ~ ws+ ~ state_name_part ~ state_alias_part? ~ state_stereotype_part? ~ ws* ~ "{" ~ NEWLINE ~
+    body ~
+    "}"
+}
+
+// Простое объявление состояния
+// state Name
+// state "Long Name" as alias
+state_simple = {
+    "state" ~ ws+ ~ state_name_part ~ state_alias_part? ~ state_stereotype_part? ~ state_description_part?
+}
+
+// Алиас состояния без ключевого слова state
+// alias : description
+state_alias = {
+    simple_identifier ~ ws* ~ ":" ~ ws* ~ state_description_text
+}
+
+// Состояние со стереотипом
+state_stereotype = {
+    "state" ~ ws+ ~ state_name_part ~ ws+ ~ "<<" ~ stereotype_name ~ ">>"
+}
+
+// Choice point
+state_choice = {
+    "state" ~ ws+ ~ state_name_part ~ ws+ ~ "<<choice>>"
+}
+
+// Fork/Join bars
+state_fork_join = {
+    "state" ~ ws+ ~ state_name_part ~ ws+ ~ ("<<fork>>" | "<<join>>")
+}
+
+// Entry/Exit points
+state_entry_exit = {
+    "state" ~ ws+ ~ state_name_part ~ ws+ ~ ("<<entryPoint>>" | "<<exitPoint>>")
+}
+
+state_name_part = { quoted_string | simple_identifier }
+state_alias_part = { ws+ ~ "as" ~ ws+ ~ simple_identifier }
+state_stereotype_part = { ws+ ~ "<<" ~ stereotype_name ~ ">>" }
+state_description_part = { ws* ~ ":" ~ ws* ~ state_description_text }
+state_description_text = { (!NEWLINE ~ ANY)* }
+
+stereotype_name = { (ASCII_ALPHANUMERIC | "_")+ }
+
+// === Переходы ===
+
+transition = {
+    transition_from ~ ws* ~ arrow ~ ws* ~ transition_to ~ transition_label?
+}
+
+// Начальное/конечное состояние или обычное
+transition_from = { 
+    initial_final_state 
+    | history_state
+    | simple_identifier 
+}
+
+transition_to = { 
+    initial_final_state 
+    | history_state
+    | simple_identifier 
+}
+
+// [*] - начальное или конечное состояние
+initial_final_state = { "[*]" }
+
+// [H] или [H*] - история
+history_state = { "[H]" | "[H*]" }
+
+// Стрелки перехода
+arrow = {
+    arrow_left
+    | arrow_right
+    | arrow_up
+    | arrow_down
+}
+
+arrow_right = { 
+    "-" ~ arrow_style? ~ "->" 
+    | "-" ~ arrow_style? ~ ">" 
+    | "-->" 
+    | "->" 
+}
+
+arrow_left = { 
+    "<-" ~ arrow_style? ~ "-" 
+    | "<" ~ arrow_style? ~ "-" 
+    | "<--" 
+    | "<-" 
+}
+
+arrow_up = { "-up->" | "-u->" | "-UP->" }
+arrow_down = { "-down->" | "-d->" | "-DOWN->" | "-do->" }
+
+arrow_style = { "[" ~ arrow_style_content ~ "]" }
+arrow_style_content = { (!"]" ~ ANY)* }
+
+// Метка перехода: : event [guard] / action
+transition_label = {
+    ws* ~ ":" ~ ws* ~ transition_label_content
+}
+
+transition_label_content = {
+    event_part? ~ ws* ~ guard_part? ~ ws* ~ action_part?
+}
+
+event_part = { event_char+ }
+event_char = { !("[" | "/" | NEWLINE) ~ ANY }
+guard_part = { "[" ~ guard_content ~ "]" }
+guard_content = { guard_char* }
+guard_char = { !"]" ~ ANY }
+action_part = { "/" ~ ws* ~ action_content }
+action_content = { (!NEWLINE ~ ANY)* }
+
+// === Заметки ===
+
+note_stmt = {
+    note_on_link
+    | note_on_state
+    | note_floating
+    | note_multiline
+}
+
+// note on link : text
+note_on_link = {
+    "note" ~ ws+ ~ "on" ~ ws+ ~ "link" ~ ws* ~ ":" ~ ws* ~ note_text
+}
+
+// note left of State : text
+// note right of State : text
+note_on_state = {
+    "note" ~ ws+ ~ note_position ~ ws+ ~ "of" ~ ws+ ~ simple_identifier ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+// note "text" as alias
+note_floating = {
+    "note" ~ ws+ ~ quoted_string ~ ws+ ~ "as" ~ ws+ ~ simple_identifier
+}
+
+// note left of State
+//   multi
+//   line
+// end note
+note_multiline = {
+    "note" ~ ws+ ~ note_position ~ ws* ~ ("of" ~ ws+ ~ simple_identifier)? ~ NEWLINE ~
+    note_body ~
+    "end" ~ ws+ ~ "note"
+}
+
+note_position = { "left" | "right" | "top" | "bottom" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws+ ~ "note") ~ ANY)* }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

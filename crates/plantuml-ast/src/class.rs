@@ -343,11 +343,7 @@ impl Relationship {
     }
 
     /// Устанавливает множественность
-    pub fn with_cardinality(
-        mut self,
-        from: impl Into<String>,
-        to: impl Into<String>,
-    ) -> Self {
+    pub fn with_cardinality(mut self, from: impl Into<String>, to: impl Into<String>) -> Self {
         self.from_cardinality = Some(from.into());
         self.to_cardinality = Some(to.into());
         self
@@ -409,8 +405,7 @@ mod tests {
 
     #[test]
     fn test_relationship() {
-        let rel = Relationship::inheritance("Dog", "Animal")
-            .with_label("extends");
+        let rel = Relationship::inheritance("Dog", "Animal").with_label("extends");
 
         assert_eq!(rel.from, "Dog");
         assert_eq!(rel.to, "Animal");

@@ -1,0 +1,111 @@
+// Грамматика для Network (nwdiag) диаграмм
+//
+// Синтаксис:
+// @startuml / nwdiag {
+//   network dmz {
+//     address = "210.x.x.x/24"
+//     web01 [address = "210.x.x.1"]
+//     web02 [address = "210.x.x.2"]
+//   }
+//   network internal {
+//     address = "172.x.x.x/24"
+//     web01 [address = "172.x.x.1"]
+//     db01
+//   }
+//   group {
+//     color = "#FFAAAA"
+//     web01
+//     web02
+//   }
+// }
+// @enduml
+
+// Точка входа
+network_diagram = { SOI ~ ws ~ nwdiag_block ~ ws ~ EOI }
+
+// Блок nwdiag
+nwdiag_block = { "nwdiag" ~ ws ~ "{" ~ ws ~ diagram_content ~ ws ~ "}" }
+
+// Содержимое диаграммы
+diagram_content = { (diagram_element ~ ws)* }
+
+// Элементы диаграммы
+diagram_element = _{ network_definition | group_definition | server_definition | comment }
+
+// Определение сети
+network_definition = { 
+    "network" ~ ws ~ identifier ~ ws ~ "{" ~ ws ~ network_content ~ ws ~ "}" 
+}
+
+// Содержимое сети
+network_content = { (network_element ~ ws)* }
+
+// Элементы сети
+network_element = _{ network_address | server_in_network | description_attr | color_attr | comment }
+
+// Адрес сети
+network_address = { "address" ~ ws ~ "=" ~ ws ~ quoted_string }
+
+// Сервер внутри сети
+server_in_network = { identifier ~ ws ~ server_attributes? }
+
+// Атрибуты сервера
+server_attributes = { "[" ~ ws ~ (server_attribute ~ ws ~ ("," ~ ws ~ server_attribute)*)? ~ ws ~ "]" }
+
+// Атрибут сервера
+server_attribute = _{ address_attr | description_attr | color_attr | type_attr }
+
+// Атрибут адреса
+address_attr = { "address" ~ ws ~ "=" ~ ws ~ quoted_string }
+
+// Атрибут описания
+description_attr = { "description" ~ ws ~ "=" ~ ws ~ quoted_string }
+
+// Атрибут цвета
+color_attr = { "color" ~ ws ~ "=" ~ ws ~ color_value }
+
+// Атрибут типа устройства
+type_attr = { "type" ~ ws ~ "=" ~ ws ~ device_type }
+
+// Тип устройства
+device_type = { 
+    "server" | "workstation" | "pc" | "desktop" | "router" | "switch" | 
+    "firewall" | "database" | "db" | "cloud" | "printer" | "mobile" | "phone" 
+}
+
+// Определение группы
+group_definition = {
+    "group" ~ ws ~ identifier? ~ ws ~ "{" ~ ws ~ group_content ~ ws ~ "}"
+}
+
+// Содержимое группы
+group_content = { (group_element ~ ws)* }
+
+// Элементы группы
+group_element = _{ color_attr | description_attr | group_member | comment }
+
+// Член группы (имя сервера)
+group_member = { identifier }
+
+// Определение сервера вне сети
+server_definition = { identifier ~ ws ~ server_attributes }
+
+// Идентификатор
+identifier = @{ (ASCII_ALPHANUMERIC | "_" | "-")+ }
+
+// Строка в кавычках
+quoted_string = { "\"" ~ string_content ~ "\"" }
+string_content = @{ (!("\"") ~ ANY)* }
+
+// Значение цвета
+color_value = @{ "#" ~ ASCII_HEX_DIGIT{3,8} | quoted_string }
+
+// Пробельные символы
+ws = _{ (WHITESPACE | NEWLINE)* }
+WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\n" | "\r\n" | "\r" }
+
+// Комментарии
+comment = _{ line_comment | block_comment }
+line_comment = _{ ("'" | "//") ~ (!NEWLINE ~ ANY)* ~ NEWLINE? }
+block_comment = _{ "/'" ~ (!"'/" ~ ANY)* ~ "'/" }

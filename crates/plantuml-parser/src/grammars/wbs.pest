@@ -1,0 +1,76 @@
+// Грамматика для WBS (Work Breakdown Structure) диаграмм PlantUML
+//
+// Синтаксис:
+// @startwbs
+// * Project
+// ** Phase 1
+// *** Task 1.1
+// @endwbs
+//
+// Также поддерживается OrgMode стиль:
+// + Phase (правая сторона)
+// - Phase (левая сторона)
+
+wbs = {
+    SOI ~
+    start_tag ~
+    NEWLINE* ~
+    (statement ~ NEWLINE+)* ~
+    statement? ~
+    end_tag ~
+    NEWLINE* ~
+    EOI
+}
+
+start_tag = _{ "@startwbs" ~ (!NEWLINE ~ ANY)* }
+end_tag = _{ "@endwbs" ~ (!NEWLINE ~ ANY)* }
+
+statement = _{
+    title_stmt |
+    caption_stmt |
+    skinparam_stmt |
+    node_line |
+    empty_line
+}
+
+// Метаданные
+title_stmt = { "title" ~ WS+ ~ text_to_eol }
+caption_stmt = { "caption" ~ WS+ ~ text_to_eol }
+skinparam_stmt = { "skinparam" ~ WS+ ~ text_to_eol }
+
+// Узлы WBS
+node_line = { 
+    (orgmode_node | asterisk_node)
+}
+
+// Стиль со звёздочками: * ** ***
+asterisk_node = {
+    asterisk_level ~ node_style? ~ WS* ~ node_text
+}
+
+asterisk_level = { "*"+ }
+
+// OrgMode стиль: + для правой стороны, - для левой
+orgmode_node = {
+    orgmode_level ~ node_style? ~ WS* ~ node_text
+}
+
+orgmode_level = { ("+" | "-")+ }
+
+// Модификаторы стиля узла
+node_style = {
+    "_" |   // box
+    "-" |   // noborder
+    ";"     // strikethrough
+}
+
+// Текст узла
+node_text = { text_to_eol }
+
+// Вспомогательные правила
+text_to_eol = @{ (!NEWLINE ~ ANY)+ }
+empty_line = @{ WS+ }
+
+// Пробелы
+WS = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

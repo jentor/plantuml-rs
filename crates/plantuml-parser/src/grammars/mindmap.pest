@@ -1,0 +1,98 @@
+// Грамматика для MindMap диаграмм PlantUML
+//
+// Синтаксис:
+// @startmindmap
+// * Root Node
+// ** Left or Right branch
+// *** Deeper level
+// @endmindmap
+//
+// Дополнительные возможности:
+// - OrgMode стиль: + для правой стороны, - для левой
+// - Markdown стиль: # для уровней
+// - Стили узлов: *_ (box), *- (noborder), *; (strikethrough)
+// - Цвета: *[#FF0000] Node
+
+mindmap = {
+    SOI ~
+    start_tag ~
+    NEWLINE* ~
+    (statement ~ NEWLINE+)* ~
+    statement? ~
+    end_tag ~
+    NEWLINE* ~
+    EOI
+}
+
+start_tag = _{ "@startmindmap" ~ (!NEWLINE ~ ANY)* }
+end_tag = _{ "@endmindmap" ~ (!NEWLINE ~ ANY)* }
+
+statement = _{
+    title_stmt |
+    caption_stmt |
+    header_stmt |
+    footer_stmt |
+    legend_stmt |
+    skinparam_stmt |
+    node_line |
+    empty_line
+}
+
+// Метаданные
+title_stmt = { "title" ~ WS+ ~ text_to_eol }
+caption_stmt = { "caption" ~ WS+ ~ text_to_eol }
+header_stmt = { "header" ~ WS+ ~ text_to_eol }
+footer_stmt = { "footer" ~ WS+ ~ text_to_eol }
+legend_stmt = { "legend" ~ WS* ~ NEWLINE ~ (!"endlegend" ~ ANY)* ~ "endlegend" }
+skinparam_stmt = { "skinparam" ~ WS+ ~ text_to_eol }
+
+// Узлы MindMap
+node_line = { 
+    (orgmode_node | markdown_node | asterisk_node)
+}
+
+// Стиль со звёздочками: * ** ***
+asterisk_node = {
+    asterisk_level ~ node_style? ~ node_color? ~ WS* ~ node_text
+}
+
+asterisk_level = { "*"+ }
+
+// OrgMode стиль: + для правой стороны, - для левой
+orgmode_node = {
+    orgmode_level ~ node_style? ~ node_color? ~ WS* ~ node_text
+}
+
+orgmode_level = { ("+" | "-")+ }
+
+// Markdown стиль: # ## ###
+markdown_node = {
+    markdown_level ~ node_style? ~ node_color? ~ WS* ~ node_text
+}
+
+markdown_level = { "#"+ }
+
+// Модификаторы стиля узла
+node_style = {
+    "_" |   // box
+    "-" |   // noborder
+    ";"     // strikethrough
+}
+
+// Цвет узла [#RRGGBB] или [#colorname]
+node_color = {
+    "[" ~ color_value ~ "]"
+}
+
+color_value = { "#" ~ (ASCII_ALPHANUMERIC)+ }
+
+// Текст узла (до конца строки или до специальных символов)
+node_text = { text_to_eol }
+
+// Вспомогательные правила
+text_to_eol = @{ (!NEWLINE ~ ANY)+ }
+empty_line = @{ WS+ }
+
+// Пробелы
+WS = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

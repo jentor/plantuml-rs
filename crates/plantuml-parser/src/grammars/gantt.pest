@@ -1,0 +1,264 @@
+// Грамматика PlantUML Gantt Diagrams
+// https://plantuml.com/gantt-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startgantt" ~ identifier? }
+end_tag = { "@endgantt" }
+
+body = { (body_line)* }
+
+body_line = _{
+    ws* ~ !end_tag ~ statement ~ NEWLINE*
+    | ws* ~ NEWLINE
+}
+
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | project_start
+    | scale_stmt
+    | closed_stmt
+    | holiday_stmt
+    | task_def
+    | milestone_def
+    | separator
+    | then_stmt
+    | note_stmt
+    | link_stmt
+    | hide_stmt
+    | print_scale
+    | language_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и настройки ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+
+// Project starts 2024-01-01
+project_start = { 
+    "project" ~ ws+ ~ "starts" ~ ws+ ~ date_value
+    | "Project" ~ ws+ ~ "starts" ~ ws+ ~ date_value
+}
+
+// printscale daily / weekly / monthly
+print_scale = { "printscale" ~ ws+ ~ scale_value }
+
+// scale 2
+scale_stmt = { "scale" ~ ws+ ~ number ~ (ws+ ~ "zoom" ~ ws+ ~ number)? }
+
+scale_value = { "daily" | "weekly" | "monthly" | "quarterly" | "yearly" }
+
+// language en / fr / de
+language_stmt = { "language" ~ ws+ ~ simple_identifier }
+
+// === Выходные и праздники ===
+
+// saturday are closed
+// sunday are closed  
+// closed saturday and sunday
+closed_stmt = { 
+    weekday ~ ws+ ~ ("are" | "is") ~ ws+ ~ "closed"
+    | "closed" ~ ws+ ~ weekday_list
+}
+
+weekday_list = { weekday ~ (ws+ ~ "and" ~ ws+ ~ weekday)* }
+
+weekday = { 
+    "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+    | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday"
+}
+
+// 2024-01-01 is closed
+// 2024-12-25 is closed (Christmas)
+holiday_stmt = {
+    date_value ~ ws+ ~ ("is" | "are") ~ ws+ ~ "closed" ~ (ws* ~ "(" ~ holiday_name ~ ")")?
+}
+
+holiday_name = { (!(")") ~ ANY)+ }
+
+// === Задачи ===
+
+// [Task name] lasts 5 days
+// [Task name] as [T1] lasts 5 days
+// [Task name] starts 2024-01-01
+// [Task name] starts at [T1]'s end
+// [Task name] ends 2024-01-15
+// [Task name] is 50% completed
+// [Task name] is colored in #FF0000
+// [Task name] links to [[url]]
+task_def = {
+    task_name ~ task_modifiers
+}
+
+task_name = { 
+    "[" ~ task_name_inner ~ "]"
+}
+
+task_name_inner = { (!"]" ~ ANY)+ }
+
+task_modifiers = { (ws+ ~ task_modifier)* }
+
+task_modifier = {
+    alias_modifier
+    | lasts_modifier
+    | starts_modifier
+    | ends_modifier
+    | complete_modifier
+    | color_modifier
+    | on_modifier
+    | requires_modifier
+}
+
+// as [T1]
+alias_modifier = { "as" ~ ws+ ~ task_ref }
+
+// lasts 5 days / lasts 2 weeks
+lasts_modifier = { 
+    "lasts" ~ ws+ ~ number ~ ws+ ~ duration_unit
+}
+
+duration_unit = { "days" | "day" | "weeks" | "week" }
+
+// starts 2024-01-01 / starts at [T1]'s end / starts after [T1]
+starts_modifier = {
+    "starts" ~ ws+ ~ date_value
+    | "starts" ~ ws+ ~ "at" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "end"
+    | "starts" ~ ws+ ~ "after" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "end"
+    | "starts" ~ ws+ ~ "after" ~ ws+ ~ task_ref
+    | "starts" ~ ws+ ~ "with" ~ ws+ ~ task_ref
+    | "starts" ~ ws+ ~ number ~ ws+ ~ duration_unit ~ ws+ ~ "after" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "end"
+}
+
+// ends 2024-01-15 / ends at [T1]'s end
+ends_modifier = {
+    "ends" ~ ws+ ~ date_value
+    | "ends" ~ ws+ ~ "at" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "end"
+    | "ends" ~ ws+ ~ "at" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "start"
+}
+
+// is 50% completed / is 100% complete
+complete_modifier = {
+    "is" ~ ws+ ~ number ~ ws* ~ "%" ~ ws+ ~ ("completed" | "complete" | "done")
+}
+
+// is colored in #FF0000 / is colored in Red
+color_modifier = {
+    "is" ~ ws+ ~ "colored" ~ ws+ ~ "in" ~ ws+ ~ color_value
+}
+
+// on {Alice} / on {Bob:Developer}
+on_modifier = {
+    "on" ~ ws+ ~ "{" ~ resource_name ~ "}"
+}
+
+resource_name = { (!"}" ~ ANY)+ }
+
+// requires [T1]
+requires_modifier = {
+    "requires" ~ ws+ ~ task_ref
+}
+
+task_ref = { "[" ~ task_ref_inner ~ "]" }
+task_ref_inner = { (!"]" ~ ANY)+ }
+
+// === then statement ===
+
+// then [Next Task] lasts 3 days
+then_stmt = {
+    "then" ~ ws+ ~ task_name ~ task_modifiers
+}
+
+// === Вехи ===
+
+// [Milestone] happens at [T1]'s end
+// [Milestone] happens 2024-01-15
+milestone_def = {
+    task_name ~ ws+ ~ "happens" ~ ws+ ~ milestone_time
+}
+
+milestone_time = {
+    "at" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ ("end" | "start")
+    | "after" ~ ws+ ~ task_ref ~ "'s" ~ ws+ ~ "end"
+    | date_value
+}
+
+// === Разделители ===
+
+// -- Phase 1 --
+// ----
+separator = {
+    "--" ~ ws* ~ separator_label? ~ ws* ~ "--"
+}
+
+separator_label = { (!("--" | NEWLINE) ~ ANY)+ }
+
+// === Заметки ===
+
+note_stmt = {
+    "note" ~ ws+ ~ note_position ~ ws+ ~ task_ref ~ ws* ~ (":" ~ ws* ~ note_text)?
+    | "note" ~ ws+ ~ note_position ~ ws+ ~ task_ref ~ ws* ~ NEWLINE ~ note_body ~ "end" ~ ws+ ~ "note"
+}
+
+note_position = { "bottom" | "top" | "left" | "right" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws+ ~ "note") ~ ANY)* }
+
+// === Ссылки ===
+
+// [T1] -> [T2]
+link_stmt = {
+    task_ref ~ ws* ~ "->" ~ ws* ~ task_ref ~ (ws* ~ ":" ~ ws* ~ link_label)?
+}
+
+link_label = { (!NEWLINE ~ ANY)* }
+
+// === Hide ===
+
+hide_stmt = { "hide" ~ ws+ ~ hide_target }
+hide_target = { "footbox" | "ressources" | "resources" | rest_of_line }
+
+// === Значения ===
+
+date_value = @{ 
+    ASCII_DIGIT{4} ~ ("-" | "/") ~ ASCII_DIGIT{1,2} ~ ("-" | "/") ~ ASCII_DIGIT{1,2}
+}
+
+color_value = { 
+    "#" ~ hex_color
+    | color_name
+}
+
+color_name = { ASCII_ALPHA+ }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+number = @{ ASCII_DIGIT+ }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

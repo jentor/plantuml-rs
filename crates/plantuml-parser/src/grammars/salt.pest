@@ -1,0 +1,104 @@
+// Грамматика для Salt (Wireframe) диаграмм
+//
+// Синтаксис:
+// @startsalt
+// {+
+//   Login    | "MyName   "
+//   Password | "****     "
+//   [Cancel] | [  OK   ]
+// }
+// @endsalt
+
+// Точка входа
+salt_diagram = { SOI ~ WHITESPACE* ~ container ~ WHITESPACE* ~ EOI }
+
+// Контейнер - основной блок
+container = { "{" ~ border_style? ~ WHITESPACE* ~ container_content ~ WHITESPACE* ~ "}" }
+
+// Стиль границ
+border_style = { 
+    "#" | "!" | "+" | 
+    "^" ~ quoted_title? |
+    "S" ~ scroll_modifier? | 
+    "T" ~ table_modifier? | 
+    "/" | "*" |
+    "-"
+}
+
+// Модификатор скролла
+scroll_modifier = { "I" | "-" }
+
+// Модификатор таблицы
+table_modifier = { "#" | "!" | "-" | "+" }
+
+// Заголовок группы
+quoted_title = { "\"" ~ title_content ~ "\"" }
+title_content = @{ (!("\"") ~ ANY)* }
+
+// Содержимое контейнера (строки разделённые переносами)
+container_content = { (row ~ (NEWLINE+ ~ row)*)? }
+
+// Строка (ячейки разделённые |)
+row = { WHITESPACE* ~ cell ~ ("|" ~ cell)* ~ WHITESPACE* }
+
+// Ячейка
+cell = { WHITESPACE* ~ widget? ~ WHITESPACE* }
+
+// Виджет
+widget = _{
+    container |
+    button |
+    textfield |
+    checkbox_checked |
+    checkbox_unchecked |
+    radio_checked |
+    radio_unchecked |
+    droplist |
+    separator |
+    tree_item |
+    plain_text
+}
+
+// Кнопка [text]
+button = { "[" ~ button_content ~ "]" }
+button_content = @{ (!("]") ~ !NEWLINE ~ ANY)* }
+
+// Текстовое поле "text"
+textfield = { "\"" ~ textfield_content ~ "\"" }
+textfield_content = @{ (!("\"") ~ !NEWLINE ~ ANY)* }
+
+// Чекбокс отмеченный [X] или [x]
+checkbox_checked = { "[" ~ WHITESPACE* ~ ("X" | "x") ~ WHITESPACE* ~ "]" }
+
+// Чекбокс неотмеченный [ ]
+checkbox_unchecked = { "[" ~ WHITESPACE* ~ "]" }
+
+// Радио отмеченная (X) или (x)
+radio_checked = { "(" ~ WHITESPACE* ~ ("X" | "x") ~ WHITESPACE* ~ ")" }
+
+// Радио неотмеченная ()
+radio_unchecked = { "(" ~ WHITESPACE* ~ ")" }
+
+// Выпадающий список ^item^
+droplist = { "^" ~ droplist_item ~ "^" ~ ("^" ~ droplist_item ~ "^")* }
+droplist_item = @{ (!("^") ~ !NEWLINE ~ ANY)* }
+
+// Разделители
+separator = { double_line | dotted_line | wavy_line | single_line }
+double_line = { "==" ~ "="* }
+dotted_line = { ".." ~ "."* }
+wavy_line = { "~~" ~ "~"* }
+single_line = { "--" ~ "-"* }
+
+// Элемент дерева (используется внутри {T})
+tree_item = { "+"+ ~ WHITESPACE* ~ tree_text }
+tree_text = @{ (!NEWLINE ~ !("|") ~ !("}") ~ ANY)* }
+
+
+
+// Обычный текст (не содержит специальных символов)
+plain_text = @{ (!NEWLINE ~ !("|") ~ !("}") ~ !("[") ~ !("\"") ~ !("(") ~ !("^") ~ !("{") ~ !("==" | ".." | "~~" | "--") ~ ANY)+ }
+
+// Пробельные символы
+WHITESPACE = _{ " " | "\t" | "\r" }
+NEWLINE = { "\n" }

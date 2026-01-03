@@ -13,6 +13,8 @@ pub struct SequenceDiagram {
     pub participants: Vec<Participant>,
     /// Элементы диаграммы (сообщения, фрагменты, заметки)
     pub elements: Vec<SequenceElement>,
+    /// Box группировки участников
+    pub boxes: Vec<ParticipantBox>,
 }
 
 impl SequenceDiagram {
@@ -29,6 +31,11 @@ impl SequenceDiagram {
     /// Добавляет элемент
     pub fn add_element(&mut self, element: SequenceElement) {
         self.elements.push(element);
+    }
+
+    /// Добавляет box группировку
+    pub fn add_box(&mut self, participant_box: ParticipantBox) {
+        self.boxes.push(participant_box);
     }
 }
 
@@ -312,6 +319,17 @@ pub struct Reference {
     /// Текст ссылки
     pub text: String,
     /// Участники, охваченные ссылкой
+    pub participants: Vec<String>,
+}
+
+/// Box группировка участников
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParticipantBox {
+    /// Название box (отображается в заголовке)
+    pub title: Option<String>,
+    /// Цвет фона
+    pub color: Option<Color>,
+    /// Участники внутри box
     pub participants: Vec<String>,
 }
 

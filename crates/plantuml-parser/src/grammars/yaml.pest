@@ -1,0 +1,128 @@
+// PlantUML YAML диаграмма
+// Синтаксис:
+// @startyaml
+// key: value
+// nested:
+//   child: value
+// list:
+//   - item1
+//   - item2
+// @endyaml
+
+yaml_diagram = {
+    SOI ~
+    ws ~
+    diagram_start ~
+    ws ~
+    (directive)* ~
+    yaml_content? ~
+    ws ~
+    diagram_end ~
+    ws ~
+    EOI
+}
+
+diagram_start = _{ "@startyaml" }
+diagram_end = _{ "@endyaml" }
+
+// Директивы PlantUML
+directive = _{ title_directive | highlight_directive }
+
+title_directive = { "title" ~ ws_inline+ ~ title_text ~ NEWLINE ~ ws }
+title_text = { (!NEWLINE ~ ANY)+ }
+
+highlight_directive = { "#highlight" ~ ws_inline+ ~ yaml_path ~ NEWLINE ~ ws }
+yaml_path = { (!NEWLINE ~ ANY)+ }
+
+// YAML контент
+yaml_content = { yaml_value }
+
+yaml_value = {
+    yaml_mapping |
+    yaml_sequence |
+    yaml_scalar
+}
+
+// YAML mapping (объект)
+yaml_mapping = {
+    yaml_mapping_entry ~ (NEWLINE ~ ws ~ yaml_mapping_entry)*
+}
+
+yaml_mapping_entry = {
+    yaml_key ~ ":" ~ ws_inline* ~ yaml_inline_value?
+}
+
+yaml_key = @{
+    (ASCII_ALPHANUMERIC | "_" | "-")+
+}
+
+yaml_inline_value = {
+    yaml_inline_mapping |
+    yaml_inline_sequence |
+    yaml_scalar
+}
+
+// Inline mapping {key: value}
+yaml_inline_mapping = {
+    "{" ~ ws ~
+    (yaml_inline_entry ~ (ws ~ "," ~ ws ~ yaml_inline_entry)*)? ~
+    ws ~ "}"
+}
+
+yaml_inline_entry = {
+    yaml_key ~ ws ~ ":" ~ ws ~ yaml_inline_value
+}
+
+// Inline sequence [item1, item2]
+yaml_inline_sequence = {
+    "[" ~ ws ~
+    (yaml_inline_value ~ (ws ~ "," ~ ws ~ yaml_inline_value)*)? ~
+    ws ~ "]"
+}
+
+// YAML block sequence (список с -)
+yaml_sequence = {
+    yaml_sequence_item ~ (NEWLINE ~ ws ~ yaml_sequence_item)*
+}
+
+yaml_sequence_item = {
+    "-" ~ ws_inline+ ~ yaml_inline_value
+}
+
+// Скаляры
+yaml_scalar = {
+    yaml_string |
+    yaml_number |
+    yaml_boolean |
+    yaml_null |
+    yaml_unquoted_string
+}
+
+yaml_string = @{
+    ("\"" ~ yaml_double_string_content ~ "\"") |
+    ("'" ~ yaml_single_string_content ~ "'")
+}
+
+yaml_double_string_content = @{
+    (!("\"" | "\\") ~ ANY | "\\" ~ ANY)*
+}
+
+yaml_single_string_content = @{
+    (!"'" ~ ANY | "''")*
+}
+
+yaml_unquoted_string = @{
+    (!(":" | "#" | NEWLINE | "[" | "]" | "{" | "}" | ",") ~ ANY)+
+}
+
+yaml_number = @{
+    "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)?
+}
+
+yaml_boolean = { "true" | "false" | "yes" | "no" | "on" | "off" }
+
+yaml_null = { "null" | "~" }
+
+// Вспомогательные правила
+ws = _{ (" " | "\t" | NEWLINE)* }
+ws_inline = _{ " " | "\t" }

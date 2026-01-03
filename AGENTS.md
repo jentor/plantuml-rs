@@ -2,209 +2,97 @@
 
 ## Проект: plantuml-rs
 
-**Pure Rust библиотека для рендеринга UML диаграмм, полностью совместимая с PlantUML**
-
----
+Pure Rust библиотека для рендеринга UML диаграмм, совместимая с PlantUML.
 
 ## КРИТИЧЕСКИ ВАЖНО
 
-- Строго использовать **русский язык** для всех коммуникаций, документации и комментариев кода
-- Весь код должен быть **Pure Rust** — никаких C/C++ зависимостей
-- Код должен компилироваться для **WASM** (wasm32-unknown-unknown)
-- **100% совместимость** с синтаксисом PlantUML
+- **Русский язык** — для всех коммуникаций, комментариев кода и документации
+- **Pure Rust** — никаких C/C++ зависимостей
+- **WASM-совместимость** — код должен компилироваться для `wasm32-unknown-unknown`
+- **100% совместимость с PlantUML** — все рендеры ОБЯЗАТЕЛЬНО сравнивать с оригинальным PlantUML и добиваться ТОЧНОГО соответствия (не "близко", а идентично)
 
----
+## ВЕРИФИКАЦИЯ РЕНДЕРИНГА
 
-## 1. ТЕХНИЧЕСКИЙ СТЕК
+При работе над рендерингом диаграмм ОБЯЗАТЕЛЬНО:
 
-### 1.1 Обязательные зависимости
+1. **Сгенерировать эталон** на оригинальном PlantUML:
+   - Открыть https://www.plantuml.com/plantuml/uml/
+   - Ввести тестовый код диаграммы
+   - Сделать скриншот результата
 
-```toml
-[workspace.dependencies]
-# Парсинг
-logos = "0.14"           # Лексер (WASM-совместим)
-pest = "2.7"             # PEG парсер (WASM-совместим)
-pest_derive = "2.7"      # Макросы для pest
+2. **Сравнить с нашим рендером**:
+   - Запустить `cargo run -p plantuml-core --example sequence_demo`
+   - Открыть сгенерированные SVG файлы
+   - Визуально сравнить КАЖДЫЙ элемент
 
-# Структуры данных
-petgraph = { version = "0.6", default-features = false }  # Графы
-indexmap = "2.0"         # Упорядоченные HashMap
-smallvec = "1.13"        # Оптимизация мелких векторов
+3. **Проверяемые аспекты** (должны быть ИДЕНТИЧНЫ):
+   - Размеры и пропорции элементов (boxes, петли, стрелки)
+   - Позиция текста относительно линий/элементов
+   - Расстояния между элементами
+   - Стиль линий (сплошные, пунктирные)
+   - Цвета и заливки
+   - Форма стрелок
 
-# Рендеринг
-svg = "0.17"             # SVG генерация
-resvg = { version = "0.42", default-features = false }    # SVG → PNG
-tiny-skia = "0.11"       # CPU растеризатор
-fontdb = { version = "0.21", default-features = false }   # Шрифты
-ab_glyph = "0.2"         # Растеризация глифов
+4. **Критерий приёмки**: визуально неотличимо от оригинала
 
-# Утилиты
-thiserror = "1.0"        # Типизированные ошибки
-serde = { version = "1.0", features = ["derive"] }        # Сериализация
+## 1. КОМАНДЫ СБОРКИ И ТЕСТИРОВАНИЯ
+
+```bash
+# Сборка и проверка
+cargo build --workspace
+cargo check --workspace
+cargo clippy --workspace -- -D warnings
+cargo fmt --all
+
+# Тесты
+cargo test --workspace                              # все тесты
+cargo test -p plantuml-parser                       # тесты одного crate
+cargo test -p plantuml-parser test_parse_basic      # один тест по имени
+cargo test -p plantuml-core --test sequence_tests   # интеграционные тесты
 
 # WASM
-wasm-bindgen = "0.2"     # JS биндинги
+cargo build --target wasm32-unknown-unknown -p plantuml-wasm
+
+# Примеры и документация
+cargo run -p plantuml-core --example sequence_demo
+cargo doc --workspace --open
 ```
-
-### 1.2 Требования к Rust
-
-- **Минимальная версия**: Rust 1.75+
-- **Edition**: 2021
-- **Targets**: 
-  - `x86_64-unknown-linux-gnu`
-  - `x86_64-apple-darwin`
-  - `aarch64-apple-darwin`
-  - `wasm32-unknown-unknown` (обязательно!)
-
-### 1.3 WASM-совместимость
-
-При добавлении зависимостей проверяй:
-- Поддерживает ли crate `wasm32-unknown-unknown`
-- Нет ли системных вызовов (filesystem, network)
-- Для шрифтов: отключать `system_fonts` feature
-
-```toml
-# Пример WASM-совместимой конфигурации
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-fontdb = { version = "0.21", default-features = false }
-```
-
----
 
 ## 2. СТРУКТУРА ПРОЕКТА
 
 ```
-plantuml-rs/
-├── Cargo.toml                    # Workspace root
-├── AGENTS.md                     # ЭТО ТЕКУЩИЙ ФАЙЛ
-├── README.md
-├── LICENSE-MIT
-├── LICENSE-APACHE
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-│
-├── crates/
-│   ├── plantuml-core/           # Главный фасад — публичный API
-│   │   ├── Cargo.toml
-│   │   └── src/lib.rs
-│   │
-│   ├── plantuml-ast/            # AST типы для всех диаграмм
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── sequence.rs      # AST для sequence diagrams
-│   │       ├── class.rs         # AST для class diagrams
-│   │       └── ...
-│   │
-│   ├── plantuml-parser/         # Лексер + Парсер
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── lexer.rs         # Logos лексер
-│   │       ├── grammars/        # Pest грамматики
-│   │       │   ├── sequence.pest
-│   │       │   ├── class.pest
-│   │       │   └── ...
-│   │       └── parsers/         # Парсеры для каждого типа
-│   │           ├── sequence.rs
-│   │           ├── class.rs
-│   │           └── ...
-│   │
-│   ├── plantuml-preprocessor/   # Препроцессор (!include, !define)
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── directives.rs    # Парсинг директив
-│   │       ├── variables.rs     # Переменные и подстановка
-│   │       ├── functions.rs     # !function, !procedure
-│   │       └── builtins.rs      # %date(), %version(), etc.
-│   │
-│   ├── plantuml-model/          # Типизированные модели
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       └── ...
-│   │
-│   ├── plantuml-layout/         # Layout engines
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── traits.rs        # trait LayoutEngine
-│   │       ├── sequence/        # Layout для sequence diagrams
-│   │       ├── hierarchical/    # Sugiyama algorithm
-│   │       ├── flowchart/       # Activity diagrams
-│   │       └── tree/            # MindMap, WBS
-│   │
-│   ├── plantuml-renderer/       # SVG/PNG рендеринг
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │       ├── lib.rs
-│   │       ├── svg.rs           # SVG генерация
-│   │       ├── png.rs           # PNG через resvg
-│   │       └── shapes/          # Примитивы рисования
-│   │
-│   ├── plantuml-themes/         # Темы и skinparam
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │
-│   ├── plantuml-stdlib/         # Стандартная библиотека
-│   │   ├── Cargo.toml
-│   │   └── src/
-│   │
-│   └── plantuml-wasm/           # WASM биндинги
-│       ├── Cargo.toml
-│       └── src/lib.rs
-│
-├── tests/
-│   ├── visual/                  # Визуальные тесты (insta snapshots)
-│   ├── compatibility/           # Тесты совместимости с PlantUML
-│   └── fixtures/                # Тестовые .puml файлы
-│       ├── sequence/
-│       ├── class/
-│       └── ...
-│
-├── examples/                    # Примеры использования
-│
-├── benches/                     # Бенчмарки
-│
-├── docs/                        # Документация
-│   ├── PLAN.md                  # Детальный план разработки
-│   ├── ARCHITECTURE.md          # Архитектура системы
-│   └── ...
-│
-└── .github/
-    └── workflows/
-        ├── ci.yml               # CI pipeline
-        └── release.yml          # Релизы
+crates/
+├── plantuml-core/       # Главный фасад — публичный API (render, parse)
+├── plantuml-ast/        # AST типы (SequenceDiagram, ClassDiagram, etc.)
+├── plantuml-parser/     # Лексер (logos) + Парсер (pest)
+├── plantuml-preprocessor/  # Директивы (!include, !define, %date())
+├── plantuml-model/      # Геометрические примитивы (Point, Rect, Size)
+├── plantuml-layout/     # Layout engines (SequenceLayoutEngine, etc.)
+├── plantuml-renderer/   # SVG рендеринг
+├── plantuml-themes/     # Темы и skinparam
+├── plantuml-stdlib/     # Стандартная библиотека PlantUML
+└── plantuml-wasm/       # WASM биндинги
 ```
 
----
+## 3. СТИЛЬ КОДА
 
-## 3. ТЕКУЩАЯ ФАЗА РАЗРАБОТКИ
-
-### Фаза 0: Инфраструктура (ТЕКУЩАЯ)
-
-**Статус**: В процессе
-
-**Задачи**:
-- [x] Создать структуру папок
-- [x] Документация (PLAN.md, AGENTS.md)
-- [ ] Инициализировать Cargo workspace
-- [ ] Настроить CI/CD (GitHub Actions)
-- [ ] Создать базовые типы в `plantuml-ast`
-- [ ] Создать трейты в `plantuml-layout` и `plantuml-renderer`
-- [ ] Настроить тестирование (insta для snapshots)
-
-**Следующая фаза**: Фаза 1 — Sequence + Class Diagrams
-
----
-
-## 4. ПРАВИЛА РАЗРАБОТКИ
-
-### 4.1 Код
-
+### 3.1 Импорты
 ```rust
-// Использовать типизированные ошибки
+// Порядок: std → external crates → internal crates → local modules
+use std::collections::HashMap;
+
+use indexmap::IndexMap;
+use thiserror::Error;
+
+use plantuml_ast::sequence::SequenceDiagram;
+use plantuml_model::{Point, Rect};
+
+use crate::config::LayoutConfig;
+use super::metrics::DiagramMetrics;
+```
+
+### 3.2 Типизированные ошибки
+```rust
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -216,7 +104,11 @@ pub enum ParseError {
     SyntaxError { line: usize, message: String },
 }
 
-// Документировать публичные API на русском
+pub type Result<T> = std::result::Result<T, ParseError>;
+```
+
+### 3.3 Документация (на русском)
+```rust
 /// Парсит PlantUML исходный код и возвращает AST диаграммы.
 ///
 /// # Аргументы
@@ -225,46 +117,59 @@ pub enum ParseError {
 /// # Возвращает
 /// * `Ok(Diagram)` - распарсенная диаграмма
 /// * `Err(ParseError)` - ошибка парсинга
-pub fn parse(source: &str) -> Result<Diagram, ParseError> {
-    // ...
-}
+pub fn parse(source: &str) -> Result<Diagram> { ... }
 ```
 
-### 4.2 Тестирование
+### 3.4 Именование
 
+- **Структуры/Enum**: `PascalCase` — `SequenceDiagram`, `ParticipantType`
+- **Функции/методы**: `snake_case` — `parse_sequence`, `add_participant`
+- **Константы**: `SCREAMING_SNAKE_CASE` — `DEFAULT_SPACING`
+- **Модули/файлы**: `snake_case` — `sequence.rs`, `svg_renderer.rs`
+
+### 3.5 Структура модулей
 ```rust
-// Unit тесты в том же файле
+//! Документация модуля на русском
+
+mod submodule;
+pub use submodule::PublicType;
+
+pub struct MainType { ... }
+
+impl MainType {
+    pub fn new() -> Self { ... }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     
     #[test]
-    fn test_parse_simple_sequence() {
-        let source = "@startuml\nAlice -> Bob: Hello\n@enduml";
-        let result = parse(source);
-        assert!(result.is_ok());
-    }
-}
-
-// Визуальные тесты с insta
-#[test]
-fn test_sequence_render() {
-    let svg = render("@startuml\nAlice -> Bob\n@enduml").unwrap();
-    insta::assert_snapshot!(svg);
+    fn test_feature() { ... }
 }
 ```
 
-### 4.3 Комментарии и документация
+## 4. ТЕСТИРОВАНИЕ
 
-- **Комментарии кода**: на русском языке
-- **Doc comments (///)**: на русском языке
-- **README, CHANGELOG**: на русском языке
-- **Сообщения коммитов**: на русском языке
+### Snapshot тесты (insta)
+```rust
+#[test]
+fn test_sequence_render_svg() {
+    let svg = render("@startuml\nAlice -> Bob\n@enduml", &RenderOptions::default()).unwrap();
+    insta::assert_snapshot!("simple_sequence", svg);
+}
+```
 
-### 4.4 Git workflow
+Принятие snapshots:
+```bash
+cd crates/plantuml-core/tests/snapshots
+for f in *.snap.new; do mv "$f" "${f%.new}"; done
+```
+
+## 5. GIT WORKFLOW
 
 ```bash
-# Формат коммитов
+# Формат коммитов (Conventional Commits на русском)
 git commit -m "feat(parser): добавлен парсинг sequence diagrams"
 git commit -m "fix(layout): исправлен расчёт позиции lifeline"
 git commit -m "docs: обновлена документация API"
@@ -272,138 +177,50 @@ git commit -m "test: добавлены тесты для class diagrams"
 git commit -m "refactor(renderer): оптимизация SVG генерации"
 ```
 
----
+## 6. WASM-СОВМЕСТИМОСТЬ
 
-## 5. АЛГОРИТМЫ LAYOUT
+При добавлении зависимостей проверять:
+- Поддержка `wasm32-unknown-unknown`
+- Отсутствие системных вызовов (filesystem, network, threads)
+- Для шрифтов: отключать `system_fonts` feature
 
-### 5.1 Sequence Diagrams
-
-**Алгоритм**:
-1. Расположить участников горизонтально с равными интервалами
-2. Рассчитать lifelines (вертикальные линии)
-3. Для каждого сообщения назначить Y-координату
-4. Обработать фрагменты (alt, opt, loop) — вложенные прямоугольники
-5. Рассчитать активации (стек)
-
-**Ключевые параметры**:
-- `participant_spacing`: 80px
-- `message_spacing`: 30px
-- `activation_width`: 10px
-- `fragment_padding`: 10px
-
-### 5.2 Class Diagrams (Sugiyama Algorithm)
-
-**Шаги**:
-1. **Cycle Removal**: удаление циклов (обратные рёбра помечаются)
-2. **Layer Assignment**: распределение узлов по слоям (longest path)
-3. **Dummy Nodes**: добавление фиктивных узлов для длинных рёбер
-4. **Crossing Minimization**: минимизация пересечений (barycenter heuristic)
-5. **Coordinate Assignment**: назначение X,Y координат (Brandes-Köpf)
-6. **Edge Routing**: ортогональная маршрутизация рёбер
-
-**Референсы**:
-- Sugiyama, K., Tagawa, S., & Toda, M. (1981). Methods for visual understanding of hierarchical system structures.
-- Brandes, U., & Köpf, B. (2001). Fast and simple horizontal coordinate assignment.
-
-### 5.3 Activity Diagrams (Flowchart)
-
-**Алгоритм**:
-1. Построить граф потока управления
-2. Применить топологическую сортировку
-3. Разместить узлы по уровням
-4. Обработать swim lanes (горизонтальное разделение)
-5. Маршрутизация рёбер с минимизацией пересечений
-
----
-
-## 6. ТИПЫ ДИАГРАММ
-
-### Приоритет реализации
-
-| Приоритет | Тип | Сложность |
-|-----------|-----|-----------|
-| 1 | Sequence Diagram | Высокая |
-| 2 | Class Diagram | Высокая |
-| 3 | Activity Diagram | Средняя |
-| 4 | State Diagram | Средняя |
-| 5 | Component Diagram | Средняя |
-| 6 | Use Case Diagram | Низкая |
-| 7 | Object Diagram | Низкая |
-| 8 | Deployment Diagram | Средняя |
-| 9 | Timing Diagram | Высокая |
-| 10+ | Non-UML (Gantt, MindMap, etc.) | Разная |
-
----
-
-## 7. REVERSE ENGINEERING PlantUML
-
-### 7.1 Ресурсы
-
-- **Исходный код**: https://github.com/plantuml/plantuml
-- **Ключевые пакеты**:
-  - `net.sourceforge.plantuml.sequencediagram` — sequence diagrams
-  - `net.sourceforge.plantuml.classdiagram` — class diagrams
-  - `net.sourceforge.plantuml.svek` — layout engine
-  - `net.sourceforge.plantuml.graphic` — рендеринг
-
-### 7.2 Подход
-
-1. Изучить структуру AST в Java коде
-2. Проанализировать алгоритмы layout (особенно Svek)
-3. Собрать тестовые примеры для каждой конструкции
-4. Сравнивать вывод нашей библиотеки с оригиналом
-
----
-
-## 8. ЧЕКЛИСТ ДЛЯ КАЖДОГО ТИПА ДИАГРАММ
-
-При реализации нового типа диаграммы:
-
-- [ ] Изучить синтаксис в документации PlantUML
-- [ ] Собрать тестовые примеры (5-10 базовых, 5-10 сложных)
-- [ ] Создать pest грамматику в `plantuml-parser/src/grammars/`
-- [ ] Создать AST типы в `plantuml-ast/src/`
-- [ ] Реализовать парсер в `plantuml-parser/src/parsers/`
-- [ ] Реализовать layout в `plantuml-layout/src/`
-- [ ] Добавить рендеринг в `plantuml-renderer/src/`
-- [ ] Написать unit тесты
-- [ ] Написать visual regression тесты
-- [ ] Проверить совместимость с PlantUML
-- [ ] Обновить документацию
-
----
-
-## 9. ПОЛЕЗНЫЕ КОМАНДЫ
-
-```bash
-# Сборка
-cargo build --workspace
-
-# Тесты
-cargo test --workspace
-
-# Проверка WASM
-cargo build --target wasm32-unknown-unknown -p plantuml-wasm
-
-# Бенчмарки
-cargo bench
-
-# Документация
-cargo doc --workspace --open
-
-# Линтер
-cargo clippy --workspace -- -D warnings
-
-# Форматирование
-cargo fmt --all
+```toml
+# WASM-совместимая конфигурация
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+fontdb = { version = "0.21", default-features = false }
 ```
 
----
+## 7. АРХИТЕКТУРА PIPELINE
 
-## 10. КОНТАКТЫ И РЕСУРСЫ
+```
+Source → Preprocessor → Parser → AST → Layout → LayoutResult → Renderer → SVG
+           (!include)    (pest)         (engine)               (svg crate)
+```
 
-- **PlantUML официальный сайт**: https://plantuml.com/
-- **PlantUML Language Reference**: https://plantuml.com/guide
-- **pest Book**: https://pest.rs/book/
-- **logos Documentation**: https://logos.maciej.codes/
-- **petgraph Documentation**: https://docs.rs/petgraph/
+## 8. ДОБАВЛЕНИЕ НОВОГО ТИПА ДИАГРАММЫ
+
+1. Создать AST в `plantuml-ast/src/{type}.rs`
+2. Добавить pest грамматику в `plantuml-parser/src/grammars/{type}.pest`
+3. Реализовать парсер в `plantuml-parser/src/parsers/{type}.rs`
+4. Реализовать layout engine в `plantuml-layout/src/{type}/`
+5. Обновить `detect_diagram_type()` в `plantuml-parser/src/lib.rs`
+6. Интегрировать в pipeline в `plantuml-core/src/pipeline.rs`
+7. Написать тесты (unit + snapshot)
+
+## 9. КЛЮЧЕВЫЕ ЗАВИСИМОСТИ
+
+| Crate | Назначение |
+|-------|------------|
+| logos | Быстрый лексер |
+| pest | PEG парсер |
+| svg | SVG генерация |
+| thiserror | Типизированные ошибки |
+| serde | Сериализация |
+| indexmap | Упорядоченный HashMap |
+| insta | Snapshot тестирование |
+
+## 10. РЕСУРСЫ
+
+- PlantUML: https://plantuml.com/
+- pest Book: https://pest.rs/book/
+- logos: https://logos.maciej.codes/

@@ -44,7 +44,12 @@ pub use options::RenderOptions;
 // Re-exports для удобства
 pub use plantuml_ast::Diagram;
 pub use plantuml_parser::parse;
+pub use plantuml_preprocessor::FsFileResolver;
 pub use plantuml_themes::Theme;
+
+// PNG рендеринг (требует feature "png")
+#[cfg(feature = "png")]
+pub use plantuml_renderer::{PngError, PngOptions, PngRenderer};
 
 /// Рендерит PlantUML диаграмму в SVG.
 ///
@@ -77,6 +82,75 @@ pub fn render(source: &str, options: &RenderOptions) -> Result<String> {
     pipeline::render_pipeline(source, options)
 }
 
+/// Рендерит PlantUML диаграмму из файла с поддержкой !include.
+///
+/// Эта функция аналогична `render`, но позволяет использовать
+/// директивы `!include` и `!include_once` для включения внешних файлов.
+///
+/// # Аргументы
+///
+/// * `source` - исходный код PlantUML
+/// * `base_path` - базовая директория для относительных путей !include
+/// * `options` - опции рендеринга
+///
+/// # Пример
+///
+/// ```rust,ignore
+/// use plantuml_core::{render_with_includes, RenderOptions};
+/// use std::path::Path;
+///
+/// let source = r#"
+/// @startuml
+/// !include "common.puml"
+/// Alice -> Bob
+/// @enduml
+/// "#;
+///
+/// let svg = render_with_includes(source, Path::new("/path/to/project"), &RenderOptions::default()).unwrap();
+/// ```
+pub fn render_with_includes(
+    source: &str,
+    base_path: &std::path::Path,
+    options: &RenderOptions,
+) -> Result<String> {
+    pipeline::render_pipeline_with_includes(source, base_path, options)
+}
+
+/// Рендерит PlantUML диаграмму в PNG.
+///
+/// Требует feature `png`.
+///
+/// # Аргументы
+///
+/// * `source` - исходный код PlantUML
+/// * `options` - опции рендеринга SVG
+/// * `png_options` - опции рендеринга PNG
+///
+/// # Пример
+///
+/// ```rust,ignore
+/// use plantuml_core::{render_png, RenderOptions, PngOptions};
+///
+/// let source = "@startuml\nAlice -> Bob\n@enduml";
+/// let png_bytes = render_png(source, &RenderOptions::default(), &PngOptions::default())?;
+/// std::fs::write("diagram.png", png_bytes)?;
+/// ```
+#[cfg(feature = "png")]
+pub fn render_png(
+    source: &str,
+    options: &RenderOptions,
+    png_options: &PngOptions,
+) -> Result<Vec<u8>> {
+    // Сначала рендерим в SVG
+    let svg = render(source, options)?;
+
+    // Затем конвертируем в PNG
+    let png_renderer = PngRenderer::new(png_options.clone());
+    png_renderer
+        .render_svg(&svg)
+        .map_err(|e| Error::Render(e.to_string()))
+}
+
 /// Парсит PlantUML и возвращает AST без рендеринга.
 ///
 /// Полезно для анализа структуры диаграммы или для собственного рендеринга.
@@ -93,11 +167,11 @@ pub fn parse_diagram(source: &str) -> Result<Diagram> {
     // Препроцессинг
     let processed = plantuml_preprocessor::preprocess(source)
         .map_err(|e: plantuml_preprocessor::PreprocessError| Error::Preprocess(e.to_string()))?;
-    
+
     // Парсинг
     let diagram = plantuml_parser::parse(&processed)
         .map_err(|e: plantuml_parser::ParseError| Error::Parse(e.to_string()))?;
-    
+
     Ok(diagram)
 }
 

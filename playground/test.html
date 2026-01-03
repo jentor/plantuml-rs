@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WASM Test</title>
+</head>
+<body>
+    <h1>WASM Box Test</h1>
+    <pre id="result">Loading...</pre>
+    <script type="module">
+        import init, { render } from './pkg/plantuml_wasm.js';
+        
+        async function test() {
+            await init();
+            
+            const source = `@startuml
+box "Фронтенд" #LightBlue
+    participant "React App" as React
+end box
+React -> React: test
+@enduml`;
+            
+            try {
+                const svg = render(source);
+                document.getElementById('result').innerHTML = 
+                    '<strong>SUCCESS!</strong>\n\n' + 
+                    svg.substring(0, 500) + '...';
+            } catch (e) {
+                document.getElementById('result').innerHTML = 
+                    '<strong style="color:red">ERROR:</strong>\n' + e;
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

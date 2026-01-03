@@ -27,7 +27,8 @@ statement = _{
     | delay
     | space
     | ref_stmt
-    | box_stmt
+    | box_start          // Box start/end как отдельные маркеры
+    | box_end
     | group_stmt
     | fragment_start     // Фрагменты - раньше message
     | fragment_else
@@ -96,6 +97,8 @@ participant_ref = @{
 }
 
 // Зарезервированные слова, которые НЕ могут быть именами участников в message
+// ВАЖНО: Проверяем что это слово целиком (не продолжение другого идентификатора)
+// Слово считается зарезервированным если за ним не следует буква, цифра или _
 reserved_word = {
     ( "participant" | "actor" | "boundary" | "control" | "entity" 
     | "database" | "collections" | "queue" | "create" | "destroy"
@@ -183,28 +186,35 @@ message_text = { (!NEWLINE ~ ANY)+ }
 // === Заметки ===
 
 note_stmt = {
-    note_single
+    note_over
+    | note_left_right
     | note_multi
     | hnote
     | rnote
 }
 
-note_single = {
-    "note" ~ ws+ ~ note_position ~ ws* ~
-    (("of" | "over") ~ ws+ ~ identifier_list)? ~
+// "note over Alice, Bob: text" или "note over Alice: text"
+note_over = {
+    "note" ~ ws+ ~ "over" ~ ws+ ~ identifier_list ~ 
     (ws* ~ ":" ~ ws* ~ note_text)?
 }
 
-note_multi = {
+// "note left: text" или "note right of Alice: text"
+note_left_right = {
     "note" ~ ws+ ~ note_position ~ ws* ~
-    (("of" | "over") ~ ws+ ~ identifier_list)? ~
+    (("of" | ":") ~ ws* ~ (identifier_list ~ ws* ~ ":")?)? ~
+    ws* ~ note_text?
+}
+
+note_multi = {
+    "note" ~ ws+ ~ (note_position | "over" ~ ws+ ~ identifier_list) ~ ws* ~
     NEWLINE ~ note_body ~ "end" ~ ws* ~ "note"
 }
 
-hnote = { "hnote" ~ ws+ ~ note_position ~ ws* ~ ("of" | "over")? ~ ws* ~ identifier_list? ~ ws* ~ ":" ~ ws* ~ note_text }
-rnote = { "rnote" ~ ws+ ~ note_position ~ ws* ~ ("of" | "over")? ~ ws* ~ identifier_list? ~ ws* ~ ":" ~ ws* ~ note_text }
+hnote = { "hnote" ~ ws+ ~ "over" ~ ws+ ~ identifier_list ~ ws* ~ ":" ~ ws* ~ note_text }
+rnote = { "rnote" ~ ws+ ~ "over" ~ ws+ ~ identifier_list ~ ws* ~ ":" ~ ws* ~ note_text }
 
-note_position = { "left" | "right" | "over" | "across" }
+note_position = { "left" | "right" | "across" }
 
 identifier_list = { simple_identifier ~ (ws* ~ "," ~ ws* ~ simple_identifier)* }
 
@@ -228,12 +238,11 @@ ref_text = { (!NEWLINE ~ ANY)* }
 ref_body = { (!("end" ~ ws* ~ "ref") ~ ANY)* }
 
 // === Box ===
+// box "Title" #Color ... end box
 
-box_stmt = { 
-    "box" ~ (ws+ ~ quoted_string)? ~ (ws+ ~ color)? ~ NEWLINE ~ 
-    (statement ~ NEWLINE*)* ~ 
-    "end" ~ ws* ~ "box"
-}
+box_start = { "box" ~ (ws+ ~ box_title)? ~ (ws* ~ color)? }
+box_title = { quoted_string | simple_identifier }
+box_end = { "end" ~ ws+ ~ "box" }
 
 // === Group (simple) ===
 
@@ -290,7 +299,8 @@ inner_string = { (!("\"") ~ ANY)* }
 
 stereotype = { "<<" ~ (!(">>") ~ ANY)* ~ ">>" }
 
-color = { "#" ~ hex_color }
+color = { "#" ~ color_value }
+color_value = @{ ASCII_HEX_DIGIT{3,8} | ASCII_ALPHA+ }
 hex_color = @{ ASCII_HEX_DIGIT{3,8} }
 
 number = @{ ASCII_DIGIT+ }

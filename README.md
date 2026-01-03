@@ -2,10 +2,12 @@
 
 **Pure Rust библиотека для рендеринга UML диаграмм, полностью совместимая с PlantUML**
 
-[![Crates.io](https://img.shields.io/crates/v/plantuml-rs.svg)](https://crates.io/crates/plantuml-rs)
-[![Documentation](https://docs.rs/plantuml-rs/badge.svg)](https://docs.rs/plantuml-rs)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![CI](https://github.com/user/plantuml-rs/workflows/CI/badge.svg)](https://github.com/user/plantuml-rs/actions)
+[![CI](https://github.com/askidmobile/PlantUML_RUST/workflows/CI/badge.svg)](https://github.com/askidmobile/PlantUML_RUST/actions)
+
+## 🎮 Попробовать онлайн
+
+**[▶️ Открыть Playground](https://askidmobile.github.io/PlantUML_RUST/playground/)** — интерактивный редактор для тестирования диаграмм прямо в браузере!
 
 ---
 
@@ -234,13 +236,29 @@ crates/
 ## Roadmap
 
 - [x] Фаза 0: Инфраструктура
-- [ ] Фаза 1: Sequence + Class Diagrams
-- [ ] Фаза 2: Activity + State + Component
-- [ ] Фаза 3: Остальные UML диаграммы
-- [ ] Фаза 4: Non-UML диаграммы
-- [ ] Фаза 5: WASM + Оптимизация
+- [x] Фаза 1: Sequence + Class Diagrams
+- [x] Фаза 2: Activity + State + Component
+- [x] Фаза 3: Остальные UML диаграммы
+- [x] Фаза 4: Non-UML диаграммы
+- [x] Фаза 5: WASM биндинги
+- [x] Playground с GitHub Pages
+- [ ] Визуальная верификация с оригинальным PlantUML
+- [ ] Публикация на crates.io
 
 Подробный план: [docs/PLAN.md](docs/PLAN.md)
+
+### Текущий статус (v0.2.0)
+
+| Компонент | Статус |
+|-----------|--------|
+| Парсинг (18 типов диаграмм) | ✅ |
+| Layout engines | ✅ |
+| SVG рендеринг | ✅ |
+| PNG рендеринг | ✅ |
+| WASM сборка | ✅ |
+| Темы (6 тем) | ✅ |
+| Препроцессор | ✅ |
+| Визуальная сверка | 🔄 В процессе |
 
 ---
 

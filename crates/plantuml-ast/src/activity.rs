@@ -232,7 +232,8 @@ mod tests {
     #[test]
     fn test_create_condition() {
         let mut cond = Condition::new("Valid?");
-        cond.then_branch.push(ActivityElement::Action(Action::new("Process")));
+        cond.then_branch
+            .push(ActivityElement::Action(Action::new("Process")));
         cond.else_branch = Some(vec![ActivityElement::Action(Action::new("Error"))]);
 
         assert_eq!(cond.condition, "Valid?");

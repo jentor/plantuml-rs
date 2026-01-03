@@ -1,0 +1,287 @@
+// Грамматика PlantUML Activity Diagrams (новый синтаксис)
+// https://plantuml.com/activity-diagram-beta
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (ws* ~ statement ~ NEWLINE*)* }
+
+// ВАЖНО: Порядок правил критичен!
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | start_node
+    | stop_node
+    | end_node
+    | detach_stmt
+    | kill_stmt
+    | if_stmt
+    | while_stmt
+    | repeat_stmt
+    | fork_stmt
+    | switch_stmt
+    | split_stmt
+    | partition_stmt
+    | swimlane_stmt
+    | connector_stmt
+    | note_stmt
+    | floating_note
+    | backward_stmt
+    | break_stmt
+    | goto_stmt
+    | label_stmt
+    | action        // Действия - последними, так как ловят :text;
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+
+// === Начало / Конец ===
+
+start_node = { "start" ~ !ASCII_ALPHANUMERIC }
+stop_node = { "stop" ~ !ASCII_ALPHANUMERIC }
+end_node = { ("end" ~ !(ws* ~ ("if" | "while" | "fork" | "split" | "switch" | "note" | "partition"))) }
+
+// === Detach / Kill ===
+
+detach_stmt = { "detach" ~ !ASCII_ALPHANUMERIC }
+kill_stmt = { "kill" ~ !ASCII_ALPHANUMERIC }
+
+// === Действия (Actions) ===
+// Формат: :text; или :text|  или другие варианты
+
+action = {
+    action_colored
+    | action_multiline
+    | action_simple
+}
+
+// Действие с цветом: #color:text;
+action_colored = {
+    color ~ action_simple
+}
+
+// Многострочное действие
+action_multiline = {
+    ":" ~ action_multiline_text ~ action_end
+}
+
+action_multiline_text = {
+    (!(action_end | NEWLINE ~ ws* ~ action_end) ~ ANY)*
+}
+
+// Простое действие: :text;
+action_simple = {
+    action_start ~ action_text ~ action_end
+}
+
+// Начало действия с разными стилями
+action_start = {
+    ":"       // Обычное действие
+    | "|"     // Partition boundary
+}
+
+action_text = { (!action_end ~ !NEWLINE ~ ANY)* }
+
+// Окончание действия с разными стилями
+action_end = {
+    ";"       // Обычное закрытие
+    | "|"     // Partition boundary
+    | "<"     // Получение сигнала
+    | ">"     // Отправка сигнала
+    | "/"     // Subactivity
+    | "]"     // Note shape
+    | "}"     // Условие
+}
+
+// === Условия (If/ElseIf/Else) ===
+
+if_stmt = {
+    "if" ~ ws* ~ "(" ~ condition_text ~ ")" ~ ws* ~ "then" ~ branch_label? ~ NEWLINE ~
+    body ~
+    elseif_clause* ~
+    else_clause? ~
+    "endif"
+}
+
+elseif_clause = {
+    ws* ~ ("elseif" | "else" ~ ws+ ~ "if") ~ ws* ~ "(" ~ condition_text ~ ")" ~ ws* ~ "then" ~ branch_label? ~ NEWLINE ~
+    body
+}
+
+else_clause = {
+    ws* ~ "else" ~ branch_label? ~ NEWLINE ~
+    body
+}
+
+condition_text = { (!")" ~ ANY)* }
+branch_label = { ws* ~ "(" ~ label_text ~ ")" }
+label_text = { (!")" ~ ANY)* }
+
+// === Цикл While ===
+
+while_stmt = {
+    "while" ~ ws* ~ "(" ~ condition_text ~ ")" ~ is_clause? ~ NEWLINE ~
+    body ~
+    "endwhile" ~ backward_label?
+}
+
+is_clause = { ws* ~ "is" ~ ws* ~ "(" ~ label_text ~ ")" }
+backward_label = { ws* ~ "(" ~ label_text ~ ")" }
+
+// === Цикл Repeat ===
+
+repeat_stmt = {
+    "repeat" ~ repeat_label? ~ NEWLINE ~
+    body ~
+    ("repeat" ~ ws+ ~ "while" ~ ws* ~ "(" ~ condition_text ~ ")" ~ is_clause? ~ backward_stmt?)
+    | ("backward" ~ backward_body ~ "repeat" ~ ws+ ~ "while" ~ ws* ~ "(" ~ condition_text ~ ")")
+}
+
+repeat_label = { ws* ~ ":" ~ action_text ~ ";" }
+
+backward_stmt = { "backward" ~ backward_body }
+backward_body = { ws* ~ ":" ~ action_text ~ ";" }
+
+// === Fork/Join ===
+
+fork_stmt = {
+    "fork" ~ NEWLINE ~
+    body ~
+    fork_again_clause* ~
+    end_fork
+}
+
+fork_again_clause = {
+    ws* ~ "fork" ~ ws+ ~ "again" ~ NEWLINE ~
+    body
+}
+
+end_fork = { 
+    "end" ~ ws+ ~ "fork" 
+    | "end" ~ ws+ ~ "merge" 
+}
+
+// === Split ===
+
+split_stmt = {
+    "split" ~ NEWLINE ~
+    body ~
+    split_again_clause* ~
+    "end" ~ ws+ ~ "split"
+}
+
+split_again_clause = {
+    ws* ~ "split" ~ ws+ ~ "again" ~ NEWLINE ~
+    body
+}
+
+// === Switch/Case ===
+
+switch_stmt = {
+    "switch" ~ ws* ~ "(" ~ condition_text ~ ")" ~ NEWLINE ~
+    case_clause+ ~
+    "endswitch"
+}
+
+case_clause = {
+    ws* ~ "case" ~ ws* ~ "(" ~ label_text ~ ")" ~ NEWLINE ~
+    body
+}
+
+// === Swimlanes ===
+
+swimlane_stmt = {
+    "|" ~ swimlane_color? ~ swimlane_name ~ "|"
+}
+
+swimlane_color = { color }
+swimlane_name = { (!("|" | NEWLINE) ~ ANY)+ }
+
+// === Партиции ===
+
+partition_stmt = {
+    "partition" ~ ws+ ~ partition_name ~ partition_color? ~ ws* ~ "{" ~ NEWLINE ~
+    body ~
+    "}"
+}
+
+partition_name = { quoted_string | simple_identifier }
+partition_color = { ws+ ~ color }
+
+// === Коннекторы и метки ===
+
+connector_stmt = { "(" ~ connector_name ~ ")" }
+connector_name = { (!")" ~ ANY)+ }
+
+goto_stmt = { "goto" ~ ws+ ~ simple_identifier }
+label_stmt = { "label" ~ ws+ ~ simple_identifier }
+
+break_stmt = { "break" ~ !ASCII_ALPHANUMERIC }
+
+// === Заметки ===
+
+note_stmt = {
+    note_inline
+    | note_multiline
+    | note_floating
+}
+
+note_inline = {
+    "note" ~ ws+ ~ note_position ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+note_multiline = {
+    "note" ~ ws+ ~ note_position ~ NEWLINE ~
+    note_body ~
+    "end" ~ ws* ~ "note"
+}
+
+note_floating = {
+    "floating" ~ ws+ ~ "note" ~ ws+ ~ note_position ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+floating_note = {
+    "note" ~ ws+ ~ "floating" ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+note_position = { "left" | "right" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws* ~ "note") ~ ANY)* }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

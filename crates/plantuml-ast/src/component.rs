@@ -64,6 +64,18 @@ pub enum ComponentType {
     Stack,
     /// Port
     Port,
+    /// Device (физическое устройство для Deployment Diagram)
+    Device,
+    /// Agent (исполняемый агент для Deployment Diagram)
+    Agent,
+    /// Control (управляющий компонент)
+    Control,
+    /// Boundary (граница системы)
+    Boundary,
+    /// Entity (сущность)
+    Entity,
+    /// Collections (коллекция)
+    Collections,
 }
 
 impl ComponentType {
@@ -87,6 +99,12 @@ impl ComponentType {
             "hexagon" => Some(Self::Hexagon),
             "stack" => Some(Self::Stack),
             "port" => Some(Self::Port),
+            "device" => Some(Self::Device),
+            "agent" => Some(Self::Agent),
+            "control" => Some(Self::Control),
+            "boundary" => Some(Self::Boundary),
+            "entity" => Some(Self::Entity),
+            "collections" => Some(Self::Collections),
             _ => None,
         }
     }
@@ -307,8 +325,7 @@ mod tests {
 
     #[test]
     fn test_create_connection() {
-        let conn = Connection::new("App", "Database")
-            .with_label("uses");
+        let conn = Connection::new("App", "Database").with_label("uses");
 
         assert_eq!(conn.from, "App");
         assert_eq!(conn.to, "Database");

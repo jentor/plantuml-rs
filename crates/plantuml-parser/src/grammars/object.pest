@@ -1,0 +1,196 @@
+// Грамматика PlantUML Object Diagrams
+// https://plantuml.com/object-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (body_line)* }
+
+body_line = _{
+    ws* ~ statement ~ NEWLINE*
+    | ws* ~ NEWLINE
+}
+
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | hide_stmt
+    | object_def
+    | map_def
+    | link
+    | note_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и настройки ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+hide_stmt = { "hide" ~ ws+ ~ rest_of_line }
+
+// === Определение объекта ===
+
+object_def = {
+    object_with_body
+    | object_simple
+}
+
+// object Name { ... }
+object_with_body = {
+    "object" ~ ws+ ~ object_name ~ class_part? ~ alias_part? ~ stereotype_part? ~ color_part? ~ ws* ~ "{" ~ NEWLINE ~
+    object_body ~
+    "}"
+}
+
+// object Name
+object_simple = {
+    "object" ~ ws+ ~ object_name ~ class_part? ~ alias_part? ~ stereotype_part? ~ color_part?
+}
+
+// Имя объекта
+object_name = { quoted_string | simple_identifier }
+
+// : ClassName - указание типа класса
+class_part = { ws* ~ ":" ~ ws* ~ class_name }
+class_name = { simple_identifier }
+
+// Тело объекта
+object_body = { (object_body_line)* ~ ws* }
+
+object_body_line = _{
+    ws* ~ !("}" ~ NEWLINE?) ~ field_def ~ NEWLINE*
+    | ws* ~ NEWLINE
+}
+
+// Определение поля: name = "value" или name = value
+field_def = {
+    field_name ~ ws* ~ "=" ~ ws* ~ field_value
+}
+
+field_name = { simple_identifier }
+field_value = { quoted_string | unquoted_value }
+unquoted_value = @{ (!NEWLINE ~ !"}" ~ ANY)+ }
+
+// === Map (ассоциативный массив) ===
+
+map_def = {
+    "map" ~ ws+ ~ object_name ~ alias_part? ~ ws* ~ "{" ~ NEWLINE ~
+    map_body ~
+    "}"
+}
+
+map_body = { (map_body_line)* ~ ws* }
+
+map_body_line = _{
+    ws* ~ !("}" ~ NEWLINE?) ~ map_entry ~ NEWLINE*
+    | ws* ~ NEWLINE
+}
+
+// key => value или key *-> value
+map_entry = {
+    map_key ~ ws* ~ ("=>" | "*->") ~ ws* ~ map_value
+}
+
+map_key = { quoted_string | simple_identifier }
+map_value = { quoted_string | simple_identifier | unquoted_value }
+
+// === Связи между объектами ===
+
+link = {
+    link_from ~ ws* ~ arrow ~ ws* ~ link_to ~ link_label?
+}
+
+link_from = { quoted_string | simple_identifier }
+link_to = { quoted_string | simple_identifier }
+
+// Стрелки
+arrow = {
+    arrow_composition
+    | arrow_aggregation
+    | arrow_dependency
+    | arrow_association
+    | arrow_link
+}
+
+arrow_composition = { "*--" | "--*" | "*-" | "-*" }
+arrow_aggregation = { "o--" | "--o" | "o-" | "-o" }
+arrow_dependency = { "..>" | "<.." | ".." }
+arrow_association = { "-->" | "<--" | "->" | "<-" }
+arrow_link = { "--" | "-" }
+
+// Метка связи
+link_label = { ws* ~ ":" ~ ws* ~ label_text }
+label_text = { (!NEWLINE ~ ANY)* }
+
+// === Заметки ===
+
+note_stmt = {
+    note_on_object
+    | note_floating
+    | note_multiline
+}
+
+// note left of Object : text
+note_on_object = {
+    "note" ~ ws+ ~ note_position ~ ws+ ~ "of" ~ ws+ ~ note_target ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+// note "text" as alias
+note_floating = {
+    "note" ~ ws+ ~ quoted_string ~ ws+ ~ "as" ~ ws+ ~ simple_identifier
+}
+
+// note left of Object
+//   multi line
+// end note
+note_multiline = {
+    "note" ~ ws+ ~ note_position ~ ws* ~ ("of" ~ ws+ ~ note_target)? ~ NEWLINE ~
+    note_body ~
+    "end" ~ ws+ ~ "note"
+}
+
+note_target = { quoted_string | simple_identifier }
+note_position = { "left" | "right" | "top" | "bottom" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws+ ~ "note") ~ ANY)* }
+
+// === Общие части ===
+
+alias_part = { ws+ ~ "as" ~ ws+ ~ simple_identifier }
+stereotype_part = { ws* ~ "<<" ~ stereotype_name ~ ">>" }
+stereotype_name = { (ASCII_ALPHANUMERIC | "_" | " ")+ }
+color_part = { ws* ~ color }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

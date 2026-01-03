@@ -1,0 +1,232 @@
+// Грамматика PlantUML Class Diagrams
+// https://plantuml.com/class-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ (ws* ~ statement ~ NEWLINE*)* ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | hide_stmt
+    | show_stmt
+    | package_start
+    | package_end
+    | namespace_start
+    | namespace_end
+    | together_start
+    | together_end
+    | class_decl
+    | interface_decl
+    | abstract_decl
+    | enum_decl
+    | annotation_decl
+    | relationship
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+
+// === Hide/Show ===
+
+hide_stmt = { "hide" ~ ws+ ~ hide_show_target }
+show_stmt = { "show" ~ ws+ ~ hide_show_target }
+hide_show_target = { 
+    ("empty" ~ ws+)? ~ ("members" | "fields" | "methods" | "attributes" | "circle" | "stereotype")
+    | identifier
+}
+
+// === Пакеты и Namespaces ===
+
+package_start = { "package" ~ ws+ ~ package_name ~ (ws+ ~ package_style)? ~ (ws+ ~ color)? ~ ws* ~ "{" }
+package_end = { "}" }
+
+package_name = { quoted_string | identifier }
+package_style = { "<<" ~ identifier ~ ">>" }
+
+namespace_start = { "namespace" ~ ws+ ~ identifier ~ (ws+ ~ color)? ~ ws* ~ "{" }
+namespace_end = { "}" }
+
+// === Together ===
+
+together_start = { "together" ~ ws* ~ "{" }
+together_end = { "}" }
+
+// === Классы ===
+
+class_decl = {
+    class_keyword ~ ws+ ~ class_name ~
+    (ws* ~ generic_params)? ~
+    (ws* ~ stereotype)? ~
+    (ws* ~ extends_clause)? ~
+    (ws* ~ implements_clause)? ~
+    (ws+ ~ color)? ~
+    (ws* ~ class_body)?
+}
+
+class_keyword = { "abstract"? ~ ws* ~ "class" }
+
+interface_decl = {
+    "interface" ~ ws+ ~ class_name ~
+    (ws* ~ generic_params)? ~
+    (ws* ~ stereotype)? ~
+    (ws+ ~ color)? ~
+    (ws* ~ class_body)?
+}
+
+abstract_decl = {
+    "abstract" ~ ws+ ~ class_name ~
+    (ws* ~ generic_params)? ~
+    (ws* ~ stereotype)? ~
+    (ws+ ~ color)? ~
+    (ws* ~ class_body)?
+}
+
+enum_decl = {
+    "enum" ~ ws+ ~ class_name ~
+    (ws* ~ stereotype)? ~
+    (ws+ ~ color)? ~
+    (ws* ~ enum_body)?
+}
+
+annotation_decl = {
+    "annotation" ~ ws+ ~ class_name ~
+    (ws* ~ stereotype)? ~
+    (ws+ ~ color)? ~
+    (ws* ~ class_body)?
+}
+
+class_name = { quoted_string | qualified_name }
+qualified_name = @{ identifier ~ ("." ~ identifier)* }
+
+generic_params = { "<" ~ generic_type ~ ("," ~ ws* ~ generic_type)* ~ ">" }
+generic_type = { identifier ~ (ws* ~ extends_bound)? }
+extends_bound = { "extends" ~ ws+ ~ identifier }
+
+extends_clause = { "extends" ~ ws+ ~ class_name }
+implements_clause = { "implements" ~ ws+ ~ class_name ~ ("," ~ ws* ~ class_name)* }
+
+// === Тело класса ===
+
+class_body = { "{" ~ ws* ~ NEWLINE* ~ (ws* ~ member ~ NEWLINE*)* ~ ws* ~ "}" }
+
+member = {
+    separator
+    | method    // method должен идти ПЕРЕД field (из-за скобок)
+    | field
+}
+
+separator = { ".." ~ (!NEWLINE ~ ANY)* ~ ".." | "--" ~ (!NEWLINE ~ ANY)* ~ "--" | "__" ~ (!NEWLINE ~ ANY)* ~ "__" | "==" ~ (!NEWLINE ~ ANY)* ~ "==" }
+
+// Метод - ищем по наличию скобок ()
+method = {
+    visibility? ~ ws* ~
+    (modifier ~ ws+)* ~
+    method_name ~ ws* ~
+    "(" ~ ws* ~ method_params? ~ ws* ~ ")" ~
+    (ws* ~ ":" ~ ws* ~ return_type)?
+}
+
+// Поле - всё что НЕ является методом (нет скобок)
+field = { 
+    visibility? ~ ws* ~ 
+    (modifier ~ ws+)* ~
+    field_name ~ 
+    !("(") ~    // Убедиться что это не метод
+    (ws* ~ ":" ~ ws* ~ field_type)?
+}
+
+visibility = { "+" | "-" | "#" | "~" | "{method}" | "{field}" }
+modifier = { "{static}" | "{abstract}" | "static" | "abstract" }
+
+field_name = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+field_type = { (!NEWLINE ~ !("}" | ",") ~ ANY)+ }
+
+method_name = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+method_params = { method_param ~ ("," ~ ws* ~ method_param)* }
+method_param = { param_name ~ (ws* ~ ":" ~ ws* ~ param_type)? }
+param_name = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+param_type = { (!("," | ")" | NEWLINE) ~ ANY)+ }
+return_type = { (!NEWLINE ~ !"}" ~ ANY)+ }
+
+// === Enum body ===
+
+enum_body = { "{" ~ ws* ~ NEWLINE* ~ (ws* ~ enum_value ~ NEWLINE*)* ~ ws* ~ "}" }
+enum_value = { identifier }
+
+// === Отношения ===
+
+relationship = {
+    class_ref ~ ws* ~
+    relationship_arrow ~ ws* ~
+    class_ref ~
+    (ws* ~ ":" ~ ws* ~ relationship_label)?
+}
+
+class_ref = { qualified_name | quoted_string }
+
+// Типы отношений:
+// <|-- наследование (inheritance)
+// <|.. реализация (implementation) 
+// *-- композиция (composition)
+// o-- агрегация (aggregation)
+// --> зависимость (dependency)
+// ..> использование (use)
+// --  связь (association)
+
+relationship_arrow = {
+    arrow_left_side ~ arrow_line ~ arrow_right_side
+}
+
+arrow_left_side = {
+    "<|" | "<" | "*" | "o" | "#" | "x" | "}" | "+" | "^" | ""
+}
+
+arrow_line = @{
+    "--" | ".." | "-" | "."
+}
+
+arrow_right_side = {
+    "|>" | ">" | "*" | "o" | "#" | "x" | "{" | "+" | "^" | ""
+}
+
+relationship_label = { (!NEWLINE ~ ANY)* }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+    | "skinparam" ~ ws+ ~ skinparam_name ~ ws* ~ "{" ~ ws* ~ NEWLINE ~ (skinparam_line ~ NEWLINE)* ~ "}"
+}
+
+skinparam_name = { (ASCII_ALPHA | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+skinparam_line = { ws* ~ skinparam_name ~ ws+ ~ skinparam_value }
+
+// === Базовые токены ===
+
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+stereotype = { "<<" ~ (!(">>") ~ ANY)* ~ ">>" }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

@@ -28,11 +28,9 @@ tarpaulin-report.html
 /doc/
 /docs/api/
 
-# WASM build
+# WASM build (root level only, playground/pkg tracked for GitHub Pages)
 /pkg/
 /dist/
-*.wasm
-*.js.map
 
 # Node.js (для WASM пакета)
 node_modules/
@@ -75,3 +73,15 @@ Thumbs.db
 perf.data
 perf.data.old
 flamegraph.svg
+
+# Generated SVG output files (test results)
+output_*.svg
+
+# Visual comparison test images (generated during testing)
+tests/visual/**/*_test.png
+tests/visual/**/our_*.svg
+tests/visual/**/our_*.png
+
+# Keep original reference images
+!tests/visual/**/original_*.svg
+!tests/visual/**/original_*.png

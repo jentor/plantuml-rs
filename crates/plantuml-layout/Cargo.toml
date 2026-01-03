@@ -13,3 +13,4 @@ plantuml-ast = { workspace = true }
 plantuml-model = { workspace = true }
 petgraph = { workspace = true }
 thiserror = { workspace = true }
+indexmap = { workspace = true }

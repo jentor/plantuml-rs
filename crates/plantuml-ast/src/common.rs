@@ -111,6 +111,25 @@ impl Color {
         Self::Named(name.into())
     }
 
+    /// Парсит цвет из строки (умно определяет тип)
+    /// Принимает: "#FF0000", "#F00", "FF0000", "red", "#red", "#LightBlue"
+    pub fn parse(s: impl Into<String>) -> Self {
+        let s = s.into();
+        let trimmed = s.trim_start_matches('#');
+        
+        // Если после удаления # остались только hex символы и длина 3, 6 или 8 - это hex
+        let is_hex = trimmed.len() >= 3 
+            && trimmed.len() <= 8 
+            && trimmed.chars().all(|c| c.is_ascii_hexdigit());
+        
+        if is_hex {
+            Self::Hex(trimmed.to_string())
+        } else {
+            // Это именованный цвет
+            Self::Named(trimmed.to_string())
+        }
+    }
+
     /// Преобразует в CSS строку
     pub fn to_css(&self) -> String {
         match self {
@@ -207,7 +226,7 @@ pub enum LineStyle {
 }
 
 /// Метаданные диаграммы
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct DiagramMetadata {
     /// Заголовок диаграммы
     pub title: Option<String>,
@@ -241,14 +260,23 @@ mod tests {
         assert_eq!(Color::named("red").to_css(), "red");
         assert_eq!(Color::from_hex("#FF0000").to_css(), "#FF0000");
         assert_eq!(Color::from_hex("FF0000").to_css(), "#FF0000");
-        assert_eq!(
-            Color::Rgb {
-                r: 255,
-                g: 0,
-                b: 0
-            }
-            .to_css(),
-            "rgb(255, 0, 0)"
-        );
+        assert_eq!(Color::Rgb { r: 255, g: 0, b: 0 }.to_css(), "rgb(255, 0, 0)");
+    }
+
+    #[test]
+    fn test_color_parse() {
+        // Hex цвета
+        assert_eq!(Color::parse("#FF0000").to_css(), "#FF0000");
+        assert_eq!(Color::parse("FF0000").to_css(), "#FF0000");
+        assert_eq!(Color::parse("#FFF").to_css(), "#FFF");
+        assert_eq!(Color::parse("ABC").to_css(), "#ABC");
+        assert_eq!(Color::parse("#AABBCCDD").to_css(), "#AABBCCDD");
+        
+        // Именованные цвета
+        assert_eq!(Color::parse("red").to_css(), "red");
+        assert_eq!(Color::parse("#red").to_css(), "red");
+        assert_eq!(Color::parse("LightBlue").to_css(), "LightBlue");
+        assert_eq!(Color::parse("#LightBlue").to_css(), "LightBlue");
+        assert_eq!(Color::parse("DarkGreen").to_css(), "DarkGreen");
     }
 }

@@ -1,0 +1,279 @@
+// Грамматика PlantUML Component Diagrams
+// https://plantuml.com/component-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (ws* ~ statement ~ NEWLINE*)* }
+
+// ВАЖНО: Порядок правил критичен!
+// 1. package_def должна идти ДО component_def, чтобы node/cloud с телом {} парсились как контейнеры
+// 2. connection должна идти ПОСЛЕ component_def, чтобы bracket_component парсился корректно
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | hide_stmt
+    | scale_stmt
+    | package_def
+    | nested_package_def
+    | interface_def
+    | connection
+    | component_def
+    | note_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и настройки ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+hide_stmt = { "hide" ~ ws+ ~ rest_of_line }
+scale_stmt = { "scale" ~ ws+ ~ rest_of_line }
+
+// === Определение компонента ===
+
+// Простой компонент без тела: component Name, [Component], database DB
+// Компоненты с телом {} обрабатываются через package_def/nested_package_def
+// ВАЖНО: Используем negative lookahead чтобы не захватывать node/folder/frame с телом {}
+component_def = {
+    container_keyword ~ ws+ ~ component_name ~ alias_part? ~ stereotype_part? ~ color_part? ~ !("{")
+    | non_container_keyword ~ ws+ ~ component_name ~ alias_part? ~ stereotype_part? ~ color_part?
+    | bracket_component ~ alias_part? ~ stereotype_part? ~ color_part?
+}
+
+// Ключевые слова, которые МОГУТ быть контейнерами (node, folder, frame, cloud, rectangle)
+// Для них нужна проверка на отсутствие {
+container_keyword = {
+    "node"
+    | "folder"
+    | "frame"
+    | "cloud"
+    | "rectangle"
+}
+
+// Ключевые слова, которые НЕ могут быть контейнерами
+non_container_keyword = {
+    "component"
+    | "database"
+    | "queue"
+    | "storage"
+    | "file"
+    | "artifact"
+    | "card"
+    | "hexagon"
+    | "stack"
+    | "actor"
+    | "device"
+    | "agent"
+    | "control"
+    | "boundary"
+    | "entity"
+    | "collections"
+}
+
+// Ключевые слова для типов компонентов (все вместе для parse_component_type)
+component_keyword = {
+    container_keyword | non_container_keyword
+}
+
+// [Component Name] синтаксис
+bracket_component = { "[" ~ bracket_content ~ "]" }
+bracket_content = { (!"]" ~ ANY)+ }
+
+component_name = { quoted_string | simple_identifier }
+
+// === Определение интерфейса ===
+
+interface_def = {
+    interface_provided
+    | interface_required
+    | interface_simple
+}
+
+// () Interface - предоставляемый
+interface_provided = { "()" ~ ws* ~ interface_name ~ alias_part? }
+
+// ( Interface - требуемый (полукруг)
+interface_required = { "(" ~ ws* ~ interface_name ~ ws* ~ ")" ~ alias_part? }
+
+// interface Name
+interface_simple = { "interface" ~ ws+ ~ interface_name ~ alias_part? ~ stereotype_part? }
+
+interface_name = { quoted_string | simple_identifier }
+
+// === Пакеты/контейнеры ===
+
+// Основной package (верхнего уровня или вложенный)
+package_def = {
+    package_keyword ~ ws+ ~ package_name ~ alias_part? ~ stereotype_part? ~ color_part? ~ ws* ~ "{" ~ NEWLINE ~
+    package_body ~
+    "}"
+}
+
+// Вложенный package (может содержать другие packages)
+nested_package_def = {
+    nested_package_keyword ~ ws+ ~ package_name ~ alias_part? ~ stereotype_part? ~ color_part? ~ ws* ~ "{" ~ NEWLINE ~
+    package_body ~
+    "}"
+}
+
+// Тело пакета может содержать вложенные пакеты
+// Используем negative lookahead чтобы остановиться перед закрывающей скобкой
+// Пустые строки (только пробелы и переводы строк) игнорируются
+package_body = { (package_line)* ~ ws* }
+
+// Строка внутри пакета: либо statement, либо пустая строка
+package_line = _{
+    ws* ~ !("}" ~ NEWLINE?) ~ package_statement ~ NEWLINE*
+    | ws* ~ NEWLINE  // пустая строка
+}
+
+package_statement = _{
+    comment
+    | skinparam
+    | nested_package_def
+    | package_def
+    | interface_def
+    | connection
+    | component_def
+    | note_stmt
+}
+
+package_keyword = {
+    "package"
+    | "cloud"
+    | "rectangle"
+}
+
+// Ключевые слова, которые могут быть и компонентом, и контейнером
+nested_package_keyword = {
+    "node"
+    | "folder"
+    | "frame"
+}
+
+package_name = { quoted_string | simple_identifier }
+
+// === Связи ===
+
+connection = {
+    connection_from ~ ws* ~ arrow ~ ws* ~ connection_to ~ connection_label?
+}
+
+connection_from = { 
+    bracket_component 
+    | interface_ref
+    | simple_identifier 
+}
+
+connection_to = { 
+    bracket_component 
+    | interface_ref
+    | simple_identifier 
+}
+
+// Ссылка на интерфейс
+interface_ref = { "()" ~ ws* ~ simple_identifier | "(" ~ simple_identifier ~ ")" }
+
+// Стрелки
+arrow = {
+    arrow_dashed
+    | arrow_solid
+}
+
+arrow_solid = { 
+    "-->" 
+    | "->" 
+    | "<--" 
+    | "<-"
+    | "--" ~ arrow_direction? ~ "->"
+    | "<-" ~ arrow_direction? ~ "--"
+}
+
+arrow_dashed = { 
+    "..>" 
+    | ".>" 
+    | "<.." 
+    | "<."
+    | ".." ~ arrow_direction? ~ ".>"
+    | "<." ~ arrow_direction? ~ ".."
+}
+
+arrow_direction = { "up" | "down" | "left" | "right" | "u" | "d" | "l" | "r" }
+
+// Метка связи
+connection_label = { ws* ~ ":" ~ ws* ~ label_text }
+label_text = { (!NEWLINE ~ ANY)* }
+
+// === Общие части ===
+
+alias_part = { ws+ ~ "as" ~ ws+ ~ simple_identifier }
+stereotype_part = { ws* ~ "<<" ~ stereotype_name ~ ">>" }
+stereotype_name = { (ASCII_ALPHANUMERIC | "_" | " ")+ }
+color_part = { ws* ~ color }
+
+// === Заметки ===
+
+note_stmt = {
+    note_on_component
+    | note_floating
+    | note_multiline
+}
+
+// note left of Component : text
+note_on_component = {
+    "note" ~ ws+ ~ note_position ~ ws+ ~ "of" ~ ws+ ~ note_target ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+// note "text" as alias
+note_floating = {
+    "note" ~ ws+ ~ quoted_string ~ ws+ ~ "as" ~ ws+ ~ simple_identifier
+}
+
+// note left of Component
+//   multi line
+// end note
+note_multiline = {
+    "note" ~ ws+ ~ note_position ~ ws* ~ ("of" ~ ws+ ~ note_target)? ~ NEWLINE ~
+    note_body ~
+    "end" ~ ws+ ~ "note"
+}
+
+note_target = { bracket_component | simple_identifier }
+note_position = { "left" | "right" | "top" | "bottom" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws+ ~ "note") ~ ANY)* }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

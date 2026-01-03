@@ -13,7 +13,7 @@ impl Color {
     pub fn new(s: impl Into<String>) -> Self {
         Self(s.into())
     }
-    
+
     /// Возвращает CSS представление
     pub fn to_css(&self) -> String {
         // Возвращаем значение as-is: hex (#fff), rgb(...), или именованные цвета
@@ -38,51 +38,77 @@ impl From<&str> for Color {
 pub struct Theme {
     /// Название темы
     pub name: String,
-    
+
     /// Цвет фона диаграммы
     pub background_color: Color,
-    
+
     /// Цвет фона узлов
     pub node_background: Color,
-    
+
     /// Цвет границы узлов
     pub node_border: Color,
-    
+
     /// Цвет текста
     pub text_color: Color,
-    
+
     /// Цвет стрелок
     pub arrow_color: Color,
-    
+
     /// Семейство шрифтов
     pub font_family: String,
-    
+
     /// Размер шрифта
     pub font_size: f64,
-    
+
     /// Толщина линий
     pub line_width: f64,
-    
+
     /// Радиус скругления углов
     pub corner_radius: f64,
-    
+
     /// Тень
     pub shadow: bool,
-    
+
     /// Рукописный стиль
     pub handwritten: bool,
 }
 
 impl Default for Theme {
     fn default() -> Self {
+        // Стиль по умолчанию как в PlantUML (серо-голубые прямоугольники)
         Self {
             name: "default".to_string(),
+            background_color: Color::new("#FFFFFF"),
+            node_background: Color::new("#E2E2F0"), // Серо-голубой фон как в PlantUML
+            node_border: Color::new("#181818"),     // Тёмная граница
+            text_color: Color::new("#000000"),
+            arrow_color: Color::new("#181818"),
+            font_family: "sans-serif".to_string(),
+            font_size: 14.0, // PlantUML использует 14 для участников
+            line_width: 1.0,
+            corner_radius: 2.5, // PlantUML использует rx/ry = 2.5
+            shadow: false,
+            handwritten: false,
+        }
+    }
+}
+
+impl Theme {
+    /// Тема по умолчанию (monochrome)
+    pub fn default_theme() -> Self {
+        Self::default()
+    }
+
+    /// Классическая цветная тема PlantUML (жёлто-красная)
+    pub fn classic() -> Self {
+        Self {
+            name: "classic".to_string(),
             background_color: Color::new("#FFFFFF"),
             node_background: Color::new("#FEFECE"),
             node_border: Color::new("#A80036"),
             text_color: Color::new("#000000"),
             arrow_color: Color::new("#A80036"),
-            font_family: "Arial, sans-serif".to_string(),
+            font_family: "sans-serif".to_string(),
             font_size: 13.0,
             line_width: 1.0,
             corner_radius: 5.0,
@@ -90,14 +116,7 @@ impl Default for Theme {
             handwritten: false,
         }
     }
-}
 
-impl Theme {
-    /// Тема по умолчанию
-    pub fn default_theme() -> Self {
-        Self::default()
-    }
-    
     /// Минималистичная тема
     pub fn minimal() -> Self {
         Self {
@@ -115,7 +134,7 @@ impl Theme {
             handwritten: false,
         }
     }
-    
+
     /// Тёмная тема
     pub fn dark() -> Self {
         Self {
@@ -133,7 +152,7 @@ impl Theme {
             handwritten: false,
         }
     }
-    
+
     /// Рукописный стиль
     pub fn sketchy() -> Self {
         Self {
@@ -151,7 +170,7 @@ impl Theme {
             handwritten: true,
         }
     }
-    
+
     /// Cerulean (голубая)
     pub fn cerulean() -> Self {
         Self {
@@ -169,11 +188,12 @@ impl Theme {
             handwritten: false,
         }
     }
-    
+
     /// Загружает тему по имени
     pub fn by_name(name: &str) -> Option<Self> {
         match name.to_lowercase().as_str() {
             "default" => Some(Self::default_theme()),
+            "classic" | "plantuml" => Some(Self::classic()),
             "minimal" => Some(Self::minimal()),
             "dark" => Some(Self::dark()),
             "sketchy" | "sketchy-outline" => Some(Self::sketchy()),
@@ -194,17 +214,17 @@ impl SkinParams {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Устанавливает параметр
     pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
         self.params.insert(key.into(), value.into());
     }
-    
+
     /// Получает параметр
     pub fn get(&self, key: &str) -> Option<&String> {
         self.params.get(key)
     }
-    
+
     /// Применяет параметры к теме
     pub fn apply_to(&self, theme: &mut Theme) {
         if let Some(v) = self.get("backgroundColor") {
@@ -231,27 +251,27 @@ impl SkinParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_theme() {
         let theme = Theme::default();
         assert_eq!(theme.name, "default");
     }
-    
+
     #[test]
     fn test_theme_by_name() {
         assert!(Theme::by_name("dark").is_some());
         assert!(Theme::by_name("unknown").is_none());
     }
-    
+
     #[test]
     fn test_skin_params() {
         let mut params = SkinParams::new();
         params.set("backgroundColor", "#FF0000");
-        
+
         let mut theme = Theme::default();
         params.apply_to(&mut theme);
-        
+
         assert_eq!(theme.background_color.to_css(), "#FF0000");
     }
 }

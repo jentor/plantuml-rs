@@ -35,7 +35,7 @@ impl LayoutConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Конфигурация для sequence diagrams
     pub fn sequence() -> Self {
         Self {
@@ -47,7 +47,7 @@ impl LayoutConfig {
             default_font_size: 13.0,
         }
     }
-    
+
     /// Конфигурация для class diagrams
     pub fn class() -> Self {
         Self {

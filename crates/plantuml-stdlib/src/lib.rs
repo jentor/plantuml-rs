@@ -33,7 +33,7 @@ pub fn exists(_path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_placeholder() {
         assert!(get_sprite("aws/Compute").is_none());

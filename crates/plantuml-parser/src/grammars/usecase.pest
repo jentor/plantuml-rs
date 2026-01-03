@@ -1,0 +1,218 @@
+// Грамматика PlantUML Use Case Diagrams
+// https://plantuml.com/use-case-diagram
+
+// === Основные правила ===
+
+diagram = { SOI ~ NEWLINE* ~ start_tag ~ NEWLINE* ~ body ~ end_tag ~ NEWLINE* ~ EOI }
+
+start_tag = { "@startuml" ~ identifier? }
+end_tag = { "@enduml" }
+
+body = { (ws* ~ statement ~ NEWLINE*)* }
+
+// ВАЖНО: Порядок правил критичен!
+// relationship должна идти ПЕРЕД actor_def и usecase_def, чтобы :User: --> распознавался
+statement = _{
+    comment
+    | skinparam
+    | title_stmt
+    | hide_stmt
+    | scale_stmt
+    | left_to_right
+    | top_to_bottom
+    | package_def
+    | rectangle_def
+    | relationship
+    | actor_def
+    | usecase_def
+    | note_stmt
+}
+
+// === Комментарии ===
+
+comment = { "'" ~ (!NEWLINE ~ ANY)* }
+
+// === Заголовок и настройки ===
+
+title_stmt = { "title" ~ ws+ ~ rest_of_line }
+hide_stmt = { "hide" ~ ws+ ~ rest_of_line }
+scale_stmt = { "scale" ~ ws+ ~ rest_of_line }
+
+// Направление диаграммы
+left_to_right = { "left" ~ ws+ ~ "to" ~ ws+ ~ "right" ~ ws+ ~ "direction" }
+top_to_bottom = { "top" ~ ws+ ~ "to" ~ ws+ ~ "bottom" ~ ws+ ~ "direction" }
+
+// === Определение актёра ===
+
+actor_def = {
+    actor_keyword ~ ws+ ~ actor_name ~ alias_part? ~ stereotype_part? ~ color_part?
+    | colon_actor
+}
+
+actor_keyword = { "actor" }
+
+// :Actor: синтаксис
+colon_actor = { ":" ~ actor_inner_name ~ ":" ~ alias_part? ~ stereotype_part? }
+actor_inner_name = { (!(":" | NEWLINE) ~ ANY)+ }
+
+actor_name = { quoted_string | simple_identifier }
+
+// === Определение варианта использования ===
+
+usecase_def = {
+    usecase_keyword ~ ws+ ~ usecase_name ~ alias_part? ~ stereotype_part? ~ color_part?
+    | paren_usecase
+}
+
+usecase_keyword = { "usecase" }
+
+// (Use Case) синтаксис
+paren_usecase = { "(" ~ usecase_inner_name ~ ")" ~ alias_part? ~ stereotype_part? }
+usecase_inner_name = { (!(")" | NEWLINE) ~ ANY)+ }
+
+usecase_name = { quoted_string | simple_identifier }
+
+// === Пакеты и прямоугольники (системы) ===
+
+package_def = {
+    "package" ~ ws+ ~ package_name ~ alias_part? ~ stereotype_part? ~ color_part? ~ ws* ~ "{" ~ NEWLINE ~
+    body ~
+    "}"
+}
+
+rectangle_def = {
+    "rectangle" ~ ws+ ~ package_name ~ alias_part? ~ stereotype_part? ~ color_part? ~ ws* ~ "{" ~ NEWLINE ~
+    body ~
+    "}"
+}
+
+package_name = { quoted_string | simple_identifier }
+
+// === Связи ===
+
+relationship = {
+    relationship_from ~ ws* ~ arrow ~ ws* ~ relationship_to ~ relationship_label?
+}
+
+relationship_from = { 
+    colon_actor_ref
+    | paren_usecase_ref
+    | simple_identifier 
+}
+
+relationship_to = { 
+    colon_actor_ref
+    | paren_usecase_ref
+    | simple_identifier 
+}
+
+// Ссылки на элементы
+colon_actor_ref = { ":" ~ actor_inner_name ~ ":" }
+paren_usecase_ref = { "(" ~ usecase_inner_name ~ ")" }
+
+// Стрелки
+arrow = {
+    arrow_generalization
+    | arrow_dashed
+    | arrow_solid
+}
+
+// Наследование
+arrow_generalization = { 
+    "<|--" 
+    | "--|>" 
+    | "-|>" 
+    | "<|-" 
+}
+
+// Пунктирные стрелки (для include/extend)
+arrow_dashed = { 
+    "..>" 
+    | ".>" 
+    | "." ~ arrow_direction? ~ ".>"
+    | "<.."
+    | "<."
+}
+
+// Сплошные стрелки
+arrow_solid = { 
+    "-->" 
+    | "->" 
+    | "<--" 
+    | "<-"
+    | "--"
+    | "-" ~ arrow_direction? ~ "->"
+    | "-" ~ arrow_direction? ~ "-"
+}
+
+arrow_direction = { "up" | "down" | "left" | "right" | "u" | "d" | "l" | "r" }
+
+// Метка связи
+relationship_label = { ws* ~ ":" ~ ws* ~ label_text }
+label_text = { (!NEWLINE ~ ANY)* }
+
+// === Общие части ===
+
+alias_part = { ws+ ~ "as" ~ ws+ ~ simple_identifier }
+stereotype_part = { ws* ~ "<<" ~ stereotype_name ~ ">>" }
+stereotype_name = { (ASCII_ALPHANUMERIC | "_" | " ")+ }
+color_part = { ws* ~ color }
+
+// === Заметки ===
+
+note_stmt = {
+    note_on_element
+    | note_floating
+    | note_multiline
+}
+
+// note left of Element : text
+note_on_element = {
+    "note" ~ ws+ ~ note_position ~ ws+ ~ "of" ~ ws+ ~ note_target ~ ws* ~ (":" ~ ws* ~ note_text)?
+}
+
+// note "text" as alias
+note_floating = {
+    "note" ~ ws+ ~ quoted_string ~ ws+ ~ "as" ~ ws+ ~ simple_identifier
+}
+
+// note left of Element
+//   multi line
+// end note
+note_multiline = {
+    "note" ~ ws+ ~ note_position ~ ws* ~ ("of" ~ ws+ ~ note_target)? ~ NEWLINE ~
+    note_body ~
+    "end" ~ ws+ ~ "note"
+}
+
+note_target = { colon_actor_ref | paren_usecase_ref | simple_identifier }
+note_position = { "left" | "right" | "top" | "bottom" }
+note_text = { (!NEWLINE ~ ANY)* }
+note_body = { (!("end" ~ ws+ ~ "note") ~ ANY)* }
+
+// === Skinparam ===
+
+skinparam = { 
+    "skinparam" ~ ws+ ~ skinparam_name ~ ws+ ~ skinparam_value
+}
+
+skinparam_name = { (ASCII_ALPHA | ASCII_DIGIT | "_")+ }
+skinparam_value = { (!NEWLINE ~ ANY)+ }
+
+// === Базовые токены ===
+
+simple_identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+identifier = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+quoted_string = { "\"" ~ inner_string ~ "\"" }
+inner_string = { (!("\"") ~ ANY)* }
+
+color = { "#" ~ hex_color }
+hex_color = @{ ASCII_HEX_DIGIT{3,8} }
+
+rest_of_line = { (!NEWLINE ~ ANY)* }
+
+// === Пробельные символы ===
+
+ws = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" | "\r" }

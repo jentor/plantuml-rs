@@ -21,8 +21,8 @@
 //! }
 //! ```
 
-use wasm_bindgen::prelude::*;
 use plantuml_core::RenderOptions;
+use wasm_bindgen::prelude::*;
 
 /// Инициализация panic hook для лучших сообщений об ошибках
 #[cfg(feature = "console_error_panic_hook")]
@@ -38,7 +38,7 @@ pub fn set_panic_hook() {
 pub fn render(source: &str) -> Result<String, JsValue> {
     #[cfg(feature = "console_error_panic_hook")]
     set_panic_hook();
-    
+
     plantuml_core::render(source, &RenderOptions::default())
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -52,11 +52,10 @@ pub fn render(source: &str) -> Result<String, JsValue> {
 pub fn render_with_theme(source: &str, theme_name: &str) -> Result<String, JsValue> {
     #[cfg(feature = "console_error_panic_hook")]
     set_panic_hook();
-    
+
     let options = RenderOptions::new().with_theme_name(theme_name);
-    
-    plantuml_core::render(source, &options)
-        .map_err(|e| JsValue::from_str(&e.to_string()))
+
+    plantuml_core::render(source, &options).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 /// Парсит PlantUML и возвращает JSON представление AST
@@ -67,10 +66,10 @@ pub fn render_with_theme(source: &str, theme_name: &str) -> Result<String, JsVal
 pub fn parse_to_json(source: &str) -> Result<String, JsValue> {
     #[cfg(feature = "console_error_panic_hook")]
     set_panic_hook();
-    
-    let diagram = plantuml_core::parse_diagram(source)
-        .map_err(|e| JsValue::from_str(&e.to_string()))?;
-    
+
+    let diagram =
+        plantuml_core::parse_diagram(source).map_err(|e| JsValue::from_str(&e.to_string()))?;
+
     serde_json::to_string(&diagram)
         .map_err(|e: serde_json::Error| JsValue::from_str(&e.to_string()))
 }
@@ -93,7 +92,7 @@ pub fn available_themes() -> Vec<JsValue> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_version() {
         assert!(!version().is_empty());
