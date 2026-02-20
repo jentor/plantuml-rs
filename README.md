@@ -251,6 +251,18 @@ main();
 ./run.sh clean all
 ```
 
+### Docker (Playground сервер)
+
+```bash
+# Сборка контейнера
+docker build -t plantuml-rs-playground .
+
+# Запуск HTTP-сервера с playground
+docker run --rm -p 8080:8080 plantuml-rs-playground
+```
+
+После запуска откройте: `http://localhost:8080`
+
 ### Ручные команды
 
 ```bash
