@@ -1,0 +1,72 @@
+name: Release WASM
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build WASM package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-wasm-release-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build WASM package
+        run: wasm-pack build crates/plantuml-wasm --target web --out-dir pkg --release
+
+      - name: Prepare release archive
+        run: |
+          mkdir -p dist
+          tar -czf "dist/plantuml-wasm-${{ github.ref_name }}.tar.gz" -C pkg .
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plantuml-wasm-${{ github.ref_name }}
+          path: |
+            pkg
+            dist/plantuml-wasm-${{ github.ref_name }}.tar.gz
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plantuml-wasm-${{ github.ref_name }}
+          path: release
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/dist/plantuml-wasm-${{ github.ref_name }}.tar.gz
+            release/pkg/*.js
+            release/pkg/*.wasm
+            release/pkg/*.d.ts

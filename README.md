@@ -3,11 +3,11 @@
 **Pure Rust библиотека для рендеринга UML диаграмм, полностью совместимая с PlantUML**
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
-[![CI](https://github.com/askidmobile/PlantUML_RUST/workflows/CI/badge.svg)](https://github.com/askidmobile/PlantUML_RUST/actions)
+[![CI](https://github.com/jentor/plantuml-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jentor/plantuml-rs/actions/workflows/ci.yml)
 
 ## 🎮 Попробовать онлайн
 
-**[▶️ Открыть Playground](https://askidmobile.github.io/PlantUML_RUST/playground/)** — интерактивный редактор для тестирования диаграмм прямо в браузере!
+**[▶️ Открыть Playground](https://jentor.github.io/plantuml-rs/playground/)** — интерактивный редактор для тестирования диаграмм прямо в браузере!
 
 ---
 
