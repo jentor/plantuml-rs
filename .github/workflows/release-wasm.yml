@@ -35,7 +35,9 @@ jobs:
           key: ${{ runner.os }}-wasm-release-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build WASM package
-        run: wasm-pack build crates/plantuml-wasm --target web --out-dir pkg --release
+        run: |
+          cd crates/plantuml-wasm
+          wasm-pack build --target web --out-dir ../../pkg --release
 
       - name: Prepare release archive
         run: |
