@@ -263,6 +263,21 @@ docker run --rm -p 8080:8080 plantuml-rs-playground
 
 После запуска откройте: `http://localhost:8080`
 
+### Docker из GHCR
+
+```bash
+# Скачать последний опубликованный образ
+docker pull ghcr.io/jentor/plantuml-rs:latest
+
+# Или конкретную версию релиза
+docker pull ghcr.io/jentor/plantuml-rs:v0.1.2
+
+# Запуск контейнера
+docker run --rm -p 8080:8080 ghcr.io/jentor/plantuml-rs:latest
+```
+
+После запуска откройте: `http://localhost:8080`
+
 ### Ручные команды
 
 ```bash
