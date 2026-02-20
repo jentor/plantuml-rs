@@ -8,7 +8,7 @@ RUN cargo install --locked wasm-pack
 COPY . .
 
 # Собираем web-target пакет и кладем его сразу в playground/pkg
-RUN wasm-pack build crates/plantuml-wasm --target web --out-dir playground/pkg --release
+RUN cd crates/plantuml-wasm && wasm-pack build --target web --out-dir ../../playground/pkg --release
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
 
